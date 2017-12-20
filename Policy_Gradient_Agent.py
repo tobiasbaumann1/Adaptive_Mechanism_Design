@@ -1,8 +1,9 @@
 import numpy as np
 import tensorflow as tf
 
-np.random.seed(5)
-tf.set_random_seed(5)
+random_seed = 28
+np.random.seed(random_seed)
+tf.set_random_seed(random_seed)
 
 class Policy_Gradient_Agent:
     def __init__(
@@ -12,13 +13,14 @@ class Policy_Gradient_Agent:
             n_nodes,
             learning_rate=0.01,
             reward_decay=0.95,
-            output_graph=False,
+            agent_idx = 0
     ):
         self.n_actions = n_actions
         self.n_features = n_features
         self.lr = learning_rate
         self.gamma = reward_decay
         self.n_nodes = n_nodes
+        self.agent_idx = agent_idx
 
         self.ep_obs, self.ep_as, self.ep_rs = [], [], []
 
@@ -28,36 +30,30 @@ class Policy_Gradient_Agent:
 
         self.cost_history = []
 
-        if output_graph:
-            # $ tensorboard --logdir=logs
-            # http://0.0.0.0:6006/
-            # tf.train.SummaryWriter soon be deprecated, use following
-            tf.summary.FileWriter("logs/", self.sess.graph)
-
         self.sess.run(tf.global_variables_initializer())
 
     def _build_net(self):
-        with tf.name_scope('inputs'):
+        with tf.name_scope('inputs'+str(self.agent_idx)):
             self.tf_obs = tf.placeholder(tf.float32, [None, self.n_features], name="observations")
             self.tf_acts = tf.placeholder(tf.int32, [None, ], name="actions_num")
             self.tf_vt = tf.placeholder(tf.float32, [None, ], name="actions_value")
-        # fc1
+        # Intermediate layer
         layer = tf.layers.dense(
             inputs=self.tf_obs,
             units=self.n_nodes,
-            activation=tf.nn.tanh,  # tanh activation
+            activation=tf.nn.relu, 
             kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
             bias_initializer=tf.constant_initializer(0.1),
-            name='fc1'
+            name='layer1_'+str(self.agent_idx)
         )
-        # fc2
+        # Last layer
         all_act = tf.layers.dense(
             inputs=layer,
             units=self.n_actions,
             activation=None,
             kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
             bias_initializer=tf.constant_initializer(0.1),
-            name='fc2'
+            name='layer2_'+str(self.agent_idx)
         )
 
         self.all_act_prob = tf.nn.softmax(all_act, name='act_prob')  # use softmax to convert to probability
@@ -122,3 +118,6 @@ class Policy_Gradient_Agent:
         plt.ylabel('Cost')
         plt.xlabel('training steps')
         plt.show()
+
+    def toString(self):
+        return 'Agent'+str(self.agent_idx)
