@@ -71,7 +71,6 @@ class Policy_Gradient_Agent:
     def reset(self):
         #tf.reset_default_graph()
         self.sess.run(tf.global_variables_initializer())
-        #tf.get_collection(tf.GraphKeys('Biases'))
 
     def store_transition(self, s, a, r, s_):
         self.ep_obs.append(s)
