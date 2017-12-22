@@ -25,6 +25,14 @@ class Agent(object):
         self.gamma = gamma
         self.agent_idx = agent_idx
 
+    def choose_action(self, s):
+        action_probs = self.calc_action_probs(s)
+        action = np.random.choice(range(action_probs.shape[1]), p=action_probs.ravel())  # select action w.r.t the actions prob
+        return action
+
+    def learn_at_episode_end(self):
+        pass
+
 class Actor_Critic_Agent(Agent):
     def __init__(self, n_actions, n_features, learning_rate=0.001, n_units_actor = 20, 
             n_units_critic = 20, gamma = 0.95, agent_idx = 0):
@@ -43,8 +51,8 @@ class Actor_Critic_Agent(Agent):
     def __str__(self):
         return 'ActorCriticAgent_'+str(self.agent_idx)
 
-    def choose_action(self, s):
-        return self.actor.choose_action(self.sess,s)
+    def calc_action_probs(self, s):
+        return self.actor.calc_action_probs(self.sess,s)
 
 class Actor(object):
     def __init__(self, n_features, n_actions, n_units = 20, learning_rate=0.001, agent_idx = 0):
@@ -84,12 +92,12 @@ class Actor(object):
         _, exp_v = sess.run([self.train_op, self.exp_v], feed_dict)
         return exp_v
 
-    def choose_action(self, sess, s):
+    def calc_action_probs(self, sess, s):
         s = s[np.newaxis, :]
         probs = sess.run(self.actions_prob, {self.s: s})   # get probabilities for all actions
         if np.isnan(probs).any():
             print(probs)
-        return np.random.choice(np.arange(probs.shape[1]), p=probs.ravel())   # return a int
+        return probs
 
 class Critic(object):
     def __init__(self, n_features, n_units, learning_rate, gamma, agent_idx):

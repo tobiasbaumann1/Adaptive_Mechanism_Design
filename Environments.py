@@ -8,22 +8,19 @@ class Environment(object):
         self.episode_length = EPISODE_LENGTH
         self.step_ctr = 0
         self.ep_ctr = 0
+        self.avg_rewards_per_round = []
 
     def step(self, actions):
-        self.step_ctr += 1
         self.update_state(actions)
         rewards = self.calculate_payoffs(actions)
+        self.stored_rewards[:,self.step_ctr] = rewards
+        self.step_ctr += 1
         return self.state_to_observation(), rewards, self.is_done()
-
-    def update_state(self, actions):
-        pass
-
-    def calculate_payoffs(self, actions):
-        pass
 
     def reset(self):
         self.s = self.initial_state()
         self.step_ctr = 0
+        self.stored_rewards = np.zeros((self.n_players,self.episode_length))
         self.ep_ctr += 1
         return self.state_to_observation()
 
@@ -35,9 +32,13 @@ class Environment(object):
 
     def is_done(self):
         if self.step_ctr >= self.episode_length:
+            self.avg_rewards_per_round.append(np.mean(self.stored_rewards,axis=1))
             return True
         else:
             return False
+
+    def get_avg_rewards_per_round(self):
+        return np.asarray(self.avg_rewards_per_round)
 
 class Public_Goods_Game(Environment):
     def __init__(self, HISTORY_LENGTH, N_EPISODES, N_PLAYERS, 
@@ -51,8 +52,9 @@ class Public_Goods_Game(Environment):
         self.reset()
 
     def update_state(self, actions):
-        self.s[:-1,:] = self.s[1:,:]
-        self.s[-1,:] = actions
+        if self.history_length > 0:
+            self.s[:-1,:] = self.s[1:,:]
+            self.s[-1,:] = actions
 
     def initial_state(self):
         return -np.ones((self.history_length,self.n_players)) #-1 means no action (at start of game)

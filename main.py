@@ -5,52 +5,47 @@ from Environments import Public_Goods_Game
 #from Policy_Gradient_Agent import Policy_Gradient_Agent
 from Agents import Actor_Critic_Agent
 #from Static_IPD_Bots import *
-import numpy as np
 
 def run_game(N_EPISODES, players):
     env.reset_ep_ctr()
-    avg_rewards = np.zeros((len(players),N_EPISODES))
     for episode in range(N_EPISODES):
         # initial observation
-        observation = env.reset()
-        rewards_sum = np.zeros(len(players))
+        s = env.reset()
 
         while True:
-            # choose action based on observation
-            actions = [player.choose_action(observation) for player in players]
+            # choose action based on s
+            actions = [player.choose_action(s) for player in players]
 
-            # take action and get next observation and reward
-            observation_, rewards, done = env.step(actions)
-            rewards_sum += rewards
+            # take action and get next s and reward
+            s_, rewards, done = env.step(actions)
 
             for player in players:
-                player.learn(observation, actions[player.agent_idx], rewards[player.agent_idx], observation_)
+                player.learn(s, actions[player.agent_idx], rewards[player.agent_idx], s_)
 
-            # swap observation
-            observation = observation_
+            # swap s
+            s = s_
 
             # break while loop when done
             if done:
                 for player in players:
-                    player.learn(observation, actions[player.agent_idx], rewards[player.agent_idx], observation_, done)
+                    player.learn_at_episode_end() 
                 break
 
         # end of game
         if (episode+1) % 10 == 0:
-            print('Episode {} done.'.format(episode + 1, env.step_ctr))
-        avg_rewards[:,episode] = rewards_sum * 1.0 / env.step_ctr
-    return avg_rewards
+            print('Episode {} finished.'.format(episode + 1))
+    return env.get_avg_rewards_per_round()
 
-def plot_results(avg_rewards, legend):
-    for idx in range(avg_rewards.shape[0]):
-        plt.plot(avg_rewards[idx,:])
+def plot_results(avg_rewards_per_round, legend):
+    for idx in range(avg_rewards_per_round.shape[1]):
+        plt.plot(avg_rewards_per_round[:,idx])
     plt.xlabel('Episode')
     plt.ylabel('Average reward per round')
     plt.legend(legend)
     plt.show()
 
 if __name__ == "__main__":
-    HISTORY_LENGTH = 5 # the NN will use the actions from this many past rounds to determine its action
+    HISTORY_LENGTH = 0 # the NN will use the actions from this many past rounds to determine its action
     N_EPISODES = 100
     N_PLAYERS = 4
     N_UNITS = 16 #number of nodes in the intermediate layer of the NN
@@ -68,8 +63,8 @@ if __name__ == "__main__":
                       gamma=0.9,
                       agent_idx = i) for i in range(N_PLAYERS)]
 
-    avg_rewards = run_game(N_EPISODES,agents)
-    plot_results(avg_rewards,[str(agent) for agent in agents])
+    avg_rewards_per_round = run_game(N_EPISODES,agents)
+    plot_results(avg_rewards_per_round,[str(agent) for agent in agents])
     # PG_agent0.reset()
     # PG_agent1.reset()
     # avg_rewards = run_game(N_EPISODES,True,agent_list)
