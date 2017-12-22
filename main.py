@@ -3,8 +3,13 @@ import matplotlib.pyplot as plt
 from Environments import Public_Goods_Game
 # from DQN_Agent import DQN_Agent
 #from Policy_Gradient_Agent import Policy_Gradient_Agent
-from Agents import Actor_Critic_Agent
+from Agents import Actor_Critic_Agent, Critic_Variant
 #from Static_IPD_Bots import *
+
+HISTORY_LENGTH = 0 # the NN will use the actions from this many past rounds to determine its action
+N_EPISODES = 100
+N_PLAYERS = 4
+N_UNITS = 16 #number of nodes in the intermediate layer of the NN
 
 def run_game(N_EPISODES, players):
     env.reset_ep_ctr()
@@ -45,10 +50,6 @@ def plot_results(avg_rewards_per_round, legend):
     plt.show()
 
 if __name__ == "__main__":
-    HISTORY_LENGTH = 0 # the NN will use the actions from this many past rounds to determine its action
-    N_EPISODES = 100
-    N_PLAYERS = 4
-    N_UNITS = 16 #number of nodes in the intermediate layer of the NN
     # Initialize env and agents
     env = Public_Goods_Game(HISTORY_LENGTH, N_EPISODES,N_PLAYERS, multiplier = 3, punishment_cost = 0.1, punishment_strength = 2)    
     # agent = DQN_Agent(env.n_actions, 2*HISTORY_LENGTH, N_UNITS,
@@ -58,10 +59,17 @@ if __name__ == "__main__":
     #                   replace_target_iter=20,
     #                   memory_size=2000,
     #                   )
-    agents = [Actor_Critic_Agent(env.n_actions, N_PLAYERS*HISTORY_LENGTH, 
+    critic_variant = Critic_Variant.CENTRALIZED
+    agents = [Actor_Critic_Agent(env, 
                       learning_rate=0.001,
                       gamma=0.9,
-                      agent_idx = i) for i in range(N_PLAYERS)]
+                      agent_idx = i,
+                      critic_variant = critic_variant) for i in range(N_PLAYERS)]
+
+    #Pass list of agents for centralized critic
+    if critic_variant is Critic_Variant.CENTRALIZED:
+        for agent in agents:
+            agent.pass_agent_list(agents)
 
     avg_rewards_per_round = run_game(N_EPISODES,agents)
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents])

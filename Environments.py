@@ -45,6 +45,7 @@ class Public_Goods_Game(Environment):
             multiplier = 2, punishment_cost = 0.2, punishment_strength = 1):
         super().__init__(3, N_PLAYERS, 100)
         self.n_episodes = N_EPISODES
+        self.n_features = HISTORY_LENGTH * N_PLAYERS
         self.multiplier = multiplier
         self.punishment_cost = punishment_cost
         self.punishment_strength = punishment_strength
