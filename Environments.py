@@ -41,10 +41,9 @@ class Environment(object):
         return np.asarray(self.avg_rewards_per_round)
 
 class Public_Goods_Game(Environment):
-    def __init__(self, HISTORY_LENGTH, N_EPISODES, N_PLAYERS, 
+    def __init__(self, HISTORY_LENGTH, N_PLAYERS, 
             multiplier = 2, punishment_cost = 0.2, punishment_strength = 1):
         super().__init__(3, N_PLAYERS, 100)
-        self.n_episodes = N_EPISODES
         self.n_features = HISTORY_LENGTH * N_PLAYERS
         self.multiplier = multiplier
         self.punishment_cost = punishment_cost
@@ -76,3 +75,37 @@ class Public_Goods_Game(Environment):
             punishments = [0] * self.n_players
         return [r1 - r2 - r3
                 for r1,r2,r3 in zip(payoffs,punishment_costs,punishments)]
+
+class Prisoners_Dilemma(Environment):
+    def __init__(self, N_PLAYERS, rep_update_factor):
+        super().__init__(3, N_PLAYERS, 100)
+        self.n_features = N_PLAYERS**2+1
+        self.rep_update_factor = rep_update_factor
+        self.reset()
+
+    def update_state(self, actions):
+        for idx, a in enumerate(actions):
+            self.s[idx,int(self.fixture[idx])] = (1-self.rep_update_factor) * self.s[idx,int(self.fixture[idx])] 
+            + self.rep_update_factor * a
+
+    def initial_state(self):
+        return 0.5 * np.ones((self.n_players,self.n_players))
+
+    def state_to_observation(self):
+        self.set_fixture()
+        return [np.insert(np.reshape(self.s,self.n_players*self.n_players),0,i) for i in range(self.n_players)]
+
+    def set_fixture(self):
+        assert(self.n_players%2==0)
+        fixture = np.zeros(self.n_players)
+        remaining_indices = list(range(self.n_players))
+        while remaining_indices:
+            pair = np.random.choice(remaining_indices, 2, replace = False)
+            fixture[pair[0]] = pair[1]
+            fixture[pair[1]] = pair[0]
+            remaining_indices.remove(pair[0])
+            remaining_indices.remove(pair[1])
+        self.fixture = fixture
+
+    def calculate_payoffs(self, actions):
+        return [1-a + 2*actions[int(self.fixture[idx])] for idx, a in enumerate(actions)]

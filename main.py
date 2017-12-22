@@ -1,12 +1,12 @@
 import matplotlib.pyplot as plt
 #from IPD_env import IPD
-from Environments import Public_Goods_Game
+from Environments import Public_Goods_Game, Prisoners_Dilemma
 # from DQN_Agent import DQN_Agent
 #from Policy_Gradient_Agent import Policy_Gradient_Agent
 from Agents import Actor_Critic_Agent, Critic_Variant
 #from Static_IPD_Bots import *
 
-HISTORY_LENGTH = 0 # the NN will use the actions from this many past rounds to determine its action
+HISTORY_LENGTH = 5 # the NN will use the actions from this many past rounds to determine its action
 N_EPISODES = 100
 N_PLAYERS = 4
 N_UNITS = 16 #number of nodes in the intermediate layer of the NN
@@ -16,16 +16,23 @@ def run_game(N_EPISODES, players):
     for episode in range(N_EPISODES):
         # initial observation
         s = env.reset()
+        flag = isinstance(s, list)
 
         while True:
             # choose action based on s
-            actions = [player.choose_action(s) for player in players]
+            if flag:
+                actions = [player.choose_action(s[idx]) for idx, player in enumerate(players)]
+            else:
+                actions = [player.choose_action(s) for player in players]
 
             # take action and get next s and reward
             s_, rewards, done = env.step(actions)
 
-            for player in players:
-                player.learn(s, actions[player.agent_idx], rewards[player.agent_idx], s_)
+            for idx, player in enumerate(players):
+                if flag:
+                    player.learn(s[idx], actions[idx], rewards[idx], s_[idx])
+                else:
+                    player.learn(s, actions[idx], rewards[idx], s_)
 
             # swap s
             s = s_
@@ -51,14 +58,8 @@ def plot_results(avg_rewards_per_round, legend):
 
 if __name__ == "__main__":
     # Initialize env and agents
-    env = Public_Goods_Game(HISTORY_LENGTH, N_EPISODES,N_PLAYERS, multiplier = 3, punishment_cost = 0.1, punishment_strength = 2)    
-    # agent = DQN_Agent(env.n_actions, 2*HISTORY_LENGTH, N_UNITS,
-    #                   learning_rate=0.1,
-    #                   reward_decay=0.9,
-    #                   e_greedy=0.9,
-    #                   replace_target_iter=20,
-    #                   memory_size=2000,
-    #                   )
+    #env = Public_Goods_Game(HISTORY_LENGTH,N_PLAYERS, multiplier = 3, punishment_cost = 0.1, punishment_strength = 2)    
+    env = Prisoners_Dilemma(N_PLAYERS, rep_update_factor = 0.33)    
     critic_variant = Critic_Variant.CENTRALIZED
     agents = [Actor_Critic_Agent(env, 
                       learning_rate=0.001,
