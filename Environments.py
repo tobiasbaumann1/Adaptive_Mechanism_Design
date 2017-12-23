@@ -78,7 +78,7 @@ class Public_Goods_Game(Environment):
 
 class Prisoners_Dilemma(Environment):
     def __init__(self, N_PLAYERS, rep_update_factor):
-        super().__init__(3, N_PLAYERS, 100)
+        super().__init__(2, N_PLAYERS, 100)
         self.n_features = N_PLAYERS**2+1
         self.rep_update_factor = rep_update_factor
         self.reset()

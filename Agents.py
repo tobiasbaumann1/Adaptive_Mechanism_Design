@@ -13,6 +13,7 @@ class Critic_Variant(Enum):
 class Agent(object):
     def __init__(self, env, learning_rate=0.001, gamma = 0.95, agent_idx = 0):
         self.sess = tf.Session()
+        self.env = env
         self.n_actions = env.n_actions
         self.n_features = env.n_features
         self.learning_rate = learning_rate
@@ -25,6 +26,9 @@ class Agent(object):
         return action
 
     def learn_at_episode_end(self):
+        pass
+
+    def pass_agent_list(self, agent_list):
         pass
 
 class Actor_Critic_Agent(Agent):
@@ -158,3 +162,19 @@ class Critic(object):
         td_error, _ = sess.run([self.td_error, self.train_op],
                                           {self.nn_inputs: nn_inputs, self.v_: v_, self.r: r})
         return td_error
+
+class Reputation_Bot(Agent):
+    def __init__(self, env, agent_idx):
+        super().__init__(env, agent_idx=agent_idx)
+
+    def calc_action_probs(self,s):
+        opponent_idx = int(s[0])
+        reputation_table = np.reshape(s[1:],(self.env.n_players,self.env.n_players))
+        opponent_reputation = reputation_table[opponent_idx,self.agent_idx]
+        p_coop = opponent_reputation
+        p_defect = 1 - p_coop
+        probs = np.array([p_defect,p_coop])[np.newaxis,:]
+        return probs
+
+    def learn(self, s, a, r, s_, done=False):
+        pass

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from Environments import Public_Goods_Game, Prisoners_Dilemma
 # from DQN_Agent import DQN_Agent
 #from Policy_Gradient_Agent import Policy_Gradient_Agent
-from Agents import Actor_Critic_Agent, Critic_Variant
+from Agents import Actor_Critic_Agent, Critic_Variant, Reputation_Bot
 #from Static_IPD_Bots import *
 
 HISTORY_LENGTH = 5 # the NN will use the actions from this many past rounds to determine its action
@@ -56,25 +56,25 @@ def plot_results(avg_rewards_per_round, legend):
     plt.legend(legend)
     plt.show()
 
+def create_population(env,n_actor_critic_agents,n_reputation_bots = 0):    
+    critic_variant = Critic_Variant.CENTRALIZED
+    l = [Actor_Critic_Agent(env, 
+                  learning_rate=0.0001,
+                  gamma=0.9,
+                  agent_idx = i,
+                  critic_variant = critic_variant) for i in range(n_actor_critic_agents)]
+    l.extend([Reputation_Bot(env,i+n_actor_critic_agents) for i in range(n_reputation_bots)])
+    #Pass list of agents for centralized critic
+    if critic_variant is Critic_Variant.CENTRALIZED:
+        for agent in l:
+            agent.pass_agent_list(l)
+    return l
+
 if __name__ == "__main__":
     # Initialize env and agents
     #env = Public_Goods_Game(HISTORY_LENGTH,N_PLAYERS, multiplier = 3, punishment_cost = 0.1, punishment_strength = 2)    
-    env = Prisoners_Dilemma(N_PLAYERS, rep_update_factor = 0.33)    
-    critic_variant = Critic_Variant.CENTRALIZED
-    agents = [Actor_Critic_Agent(env, 
-                      learning_rate=0.001,
-                      gamma=0.9,
-                      agent_idx = i,
-                      critic_variant = critic_variant) for i in range(N_PLAYERS)]
-
-    #Pass list of agents for centralized critic
-    if critic_variant is Critic_Variant.CENTRALIZED:
-        for agent in agents:
-            agent.pass_agent_list(agents)
-
+    env = Prisoners_Dilemma(N_PLAYERS, rep_update_factor = 0.5)    
+    agents = create_population(env,int(N_PLAYERS/2),int(N_PLAYERS/2))
+    
     avg_rewards_per_round = run_game(N_EPISODES,agents)
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents])
-    # PG_agent0.reset()
-    # PG_agent1.reset()
-    # avg_rewards = run_game(N_EPISODES,True,agent_list)
-    # plot_results(avg_rewards,['Agent0','Agent1']), agent_idx = 0
