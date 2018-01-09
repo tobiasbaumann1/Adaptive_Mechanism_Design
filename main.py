@@ -8,8 +8,8 @@ from Agents import Actor_Critic_Agent, Critic_Variant, Reputation_Bot
 
 HISTORY_LENGTH = 5 # the NN will use the actions from this many past rounds to determine its action
 N_EPISODES = 100
-N_PLAYERS = 4
-N_UNITS = 16 #number of nodes in the intermediate layer of the NN
+N_PLAYERS = 2
+N_UNITS = 64 #number of nodes in the intermediate layer of the NN
 
 def run_game(N_EPISODES, players):
     env.reset_ep_ctr()
@@ -30,7 +30,7 @@ def run_game(N_EPISODES, players):
 
             for idx, player in enumerate(players):
                 if flag:
-                    player.learn(s[idx], actions[idx], rewards[idx], s_[idx])
+                    player.learn(s[idx], actions[idx], rewards[idx], s_[idx], s, s_)
                 else:
                     player.learn(s, actions[idx], rewards[idx], s_)
 
@@ -43,7 +43,7 @@ def run_game(N_EPISODES, players):
                     player.learn_at_episode_end() 
                 break
 
-        # end of game
+        # status updates
         if (episode+1) % 10 == 0:
             print('Episode {} finished.'.format(episode + 1))
     return env.get_avg_rewards_per_round()
@@ -73,8 +73,10 @@ def create_population(env,n_actor_critic_agents,n_reputation_bots = 0):
 if __name__ == "__main__":
     # Initialize env and agents
     #env = Public_Goods_Game(HISTORY_LENGTH,N_PLAYERS, multiplier = 3, punishment_cost = 0.1, punishment_strength = 2)    
-    env = Prisoners_Dilemma(N_PLAYERS, rep_update_factor = 0.5)    
-    agents = create_population(env,int(N_PLAYERS/2),int(N_PLAYERS/2))
+    env = Prisoners_Dilemma(N_PLAYERS, rep_update_factor = 1)    
+    agents = create_population(env,1,int(N_PLAYERS)-1)
     
     avg_rewards_per_round = run_game(N_EPISODES,agents)
+    print(env.n_coop_defect_list[-1])
+    print(env.s)
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents])

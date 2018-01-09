@@ -1,8 +1,8 @@
 import numpy as np
 import tensorflow as tf
 
-np.random.seed(3)
-tf.set_random_seed(3)  # reproducible
+np.random.seed(2)
+tf.set_random_seed(2)
 
 from enum import Enum, auto
 class Critic_Variant(Enum):
@@ -41,11 +41,11 @@ class Actor_Critic_Agent(Agent):
                             critic_variant)
         self.sess.run(tf.global_variables_initializer())
 
-    def learn(self, s, a, r, s_, done=False):
+    def learn(self, s, a, r, s_, obslist, obs_list, done = False):
         if done:
             pass
         else:
-            td = self.critic.learn(self.sess,s,r,s_)
+            td = self.critic.learn(self.sess,s,r,s_, obslist, obs_list)
             self.actor.learn(self.sess,s,a,td)
 
     def __str__(self):
@@ -102,12 +102,11 @@ class Actor(object):
             print(probs)
         return probs
 
-
-
 class Critic(object):
     def __init__(self, env, n_units, learning_rate, gamma, agent_idx, 
                 critic_variant = Critic_Variant.INDEPENDENT):
         self.critic_variant = critic_variant
+        self.env = env
 
         self.s = tf.placeholder(tf.float32, [1, env.n_features], "state")
         self.v_ = tf.placeholder(tf.float32, [1, 1], "v_next")
@@ -147,12 +146,12 @@ class Critic(object):
     def pass_agent_list(self, agent_list):
         self.agent_list = agent_list
 
-    def learn(self, sess, s, r, s_):
+    def learn(self, sess, s, r, s_, obslist, obs_list):
         s,s_ = s.astype(np.float32), s_.astype(np.float32)
 
         if self.critic_variant is Critic_Variant.CENTRALIZED:
-            act_probs = np.hstack([agent.calc_action_probs(s) for agent in self.agent_list])
-            act_probs_ = np.hstack([agent.calc_action_probs(s_) for agent in self.agent_list])
+            act_probs = np.hstack([agent.calc_action_probs(obslist[idx]) for idx, agent in enumerate(self.agent_list)])
+            act_probs_ = np.hstack([agent.calc_action_probs(obs_list[idx]) for idx, agent in enumerate(self.agent_list)])
             nn_inputs = np.hstack([s[np.newaxis, :], act_probs])
             nn_inputs_ = np.hstack([s_[np.newaxis, :], act_probs_])
         else:
@@ -169,12 +168,19 @@ class Reputation_Bot(Agent):
 
     def calc_action_probs(self,s):
         opponent_idx = int(s[0])
+        assert (self.agent_idx != opponent_idx)
         reputation_table = np.reshape(s[1:],(self.env.n_players,self.env.n_players))
         opponent_reputation = reputation_table[opponent_idx,self.agent_idx]
         p_coop = opponent_reputation
         p_defect = 1 - p_coop
         probs = np.array([p_defect,p_coop])[np.newaxis,:]
+        # if opponent_idx == self.agent_idx:
+        #     print(opponent_idx)
+        #     print(s)
         return probs
 
-    def learn(self, s, a, r, s_, done=False):
+    def learn(self, s, a, r, s_, *args):
         pass
+
+    def __str__(self):
+        return 'ReputationBot_'+str(self.agent_idx)

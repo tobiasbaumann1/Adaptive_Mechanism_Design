@@ -8,10 +8,12 @@ class Environment(object):
         self.episode_length = EPISODE_LENGTH
         self.step_ctr = 0
         self.ep_ctr = 0
+        self.actions_list = []
         self.avg_rewards_per_round = []
 
     def step(self, actions):
         self.update_state(actions)
+        self.actions_list.append(actions)
         rewards = self.calculate_payoffs(actions)
         self.stored_rewards[:,self.step_ctr] = rewards
         self.step_ctr += 1
@@ -19,6 +21,7 @@ class Environment(object):
 
     def reset(self):
         self.s = self.initial_state()
+        self.actions_list = []
         self.step_ctr = 0
         self.stored_rewards = np.zeros((self.n_players,self.episode_length))
         self.ep_ctr += 1
@@ -82,18 +85,29 @@ class Prisoners_Dilemma(Environment):
         self.n_features = N_PLAYERS**2+1
         self.rep_update_factor = rep_update_factor
         self.reset()
+        self.n_coop_defect_list = []
 
     def update_state(self, actions):
         for idx, a in enumerate(actions):
-            self.s[idx,int(self.fixture[idx])] = (1-self.rep_update_factor) * self.s[idx,int(self.fixture[idx])] 
-            + self.rep_update_factor * a
+            opp_idx = int(self.fixture[idx])
+            self.s[idx,opp_idx] = (1-self.rep_update_factor) * self.s[idx,opp_idx] + self.rep_update_factor * a
+            if a == 1:
+                self.n_cooperate[idx,opp_idx] += 1
+            else:
+                self.n_defect[idx,opp_idx] += 1
+
+    def reset(self):
+        self.n_defect = np.zeros((self.n_players,self.n_players))
+        self.n_cooperate = np.zeros((self.n_players,self.n_players))
+        return super().reset()
 
     def initial_state(self):
-        return 0.5 * np.ones((self.n_players,self.n_players))
+        return np.ones((self.n_players,self.n_players))
 
     def state_to_observation(self):
         self.set_fixture()
-        return [np.insert(np.reshape(self.s,self.n_players*self.n_players),0,i) for i in range(self.n_players)]
+        self.obs_list = [np.insert(np.reshape(self.s,self.n_players*self.n_players),0,self.fixture[i]) for i in range(self.n_players)]
+        return self.obs_list
 
     def set_fixture(self):
         assert(self.n_players%2==0)
@@ -107,5 +121,9 @@ class Prisoners_Dilemma(Environment):
             remaining_indices.remove(pair[1])
         self.fixture = fixture
 
+    def is_done(self):
+        self.n_coop_defect_list.append((self.n_cooperate, self.n_defect))
+        return super().is_done()
+
     def calculate_payoffs(self, actions):
-        return [1-a + 2*actions[int(self.fixture[idx])] for idx, a in enumerate(actions)]
+        return [1 - a + 2*actions[int(self.fixture[idx])] for idx, a in enumerate(actions)]
