@@ -41,11 +41,11 @@ class Actor_Critic_Agent(Agent):
                             critic_variant)
         self.sess.run(tf.global_variables_initializer())
 
-    def learn(self, s, a, r, s_, obslist, obs_list, done = False):
+    def learn(self, s, a, r, s_, done = False, *args):
         if done:
             pass
         else:
-            td = self.critic.learn(self.sess,s,r,s_, obslist, obs_list)
+            td = self.critic.learn(self.sess,s,r,s_, *args)
             self.actor.learn(self.sess,s,a,td)
 
     def __str__(self):
@@ -146,12 +146,18 @@ class Critic(object):
     def pass_agent_list(self, agent_list):
         self.agent_list = agent_list
 
-    def learn(self, sess, s, r, s_, obslist, obs_list):
+    def learn(self, sess, s, r, s_, *args):
         s,s_ = s.astype(np.float32), s_.astype(np.float32)
 
         if self.critic_variant is Critic_Variant.CENTRALIZED:
-            act_probs = np.hstack([agent.calc_action_probs(obslist[idx]) for idx, agent in enumerate(self.agent_list)])
-            act_probs_ = np.hstack([agent.calc_action_probs(obs_list[idx]) for idx, agent in enumerate(self.agent_list)])
+            if args: 
+                obslist = args[0]
+                obs_list = args[1]
+                act_probs = np.hstack([agent.calc_action_probs(obslist[idx]) for idx, agent in enumerate(self.agent_list)])
+                act_probs_ = np.hstack([agent.calc_action_probs(obs_list[idx]) for idx, agent in enumerate(self.agent_list)])
+            else: 
+                act_probs = np.hstack([agent.calc_action_probs(s) for idx, agent in enumerate(self.agent_list)])
+                act_probs_ = np.hstack([agent.calc_action_probs(s_) for idx, agent in enumerate(self.agent_list)])
             nn_inputs = np.hstack([s[np.newaxis, :], act_probs])
             nn_inputs_ = np.hstack([s_[np.newaxis, :], act_probs_])
         else:

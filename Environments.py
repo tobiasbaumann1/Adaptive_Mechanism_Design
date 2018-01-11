@@ -1,8 +1,7 @@
 import numpy as np
 
 class Environment(object):
-    def __init__(self, N_ACTIONS, N_PLAYERS, EPISODE_LENGTH,
-            multiplier = 2, punishment_cost = 0.2, punishment_strength = 1):
+    def __init__(self, N_ACTIONS, N_PLAYERS, EPISODE_LENGTH):
         self.n_actions = N_ACTIONS
         self.n_players = N_PLAYERS
         self.episode_length = EPISODE_LENGTH
@@ -79,6 +78,9 @@ class Public_Goods_Game(Environment):
         return [r1 - r2 - r3
                 for r1,r2,r3 in zip(payoffs,punishment_costs,punishments)]
 
+    def __str__(self):
+        return "Public_Goods_Game"
+
 class Prisoners_Dilemma(Environment):
     def __init__(self, N_PLAYERS, rep_update_factor):
         super().__init__(2, N_PLAYERS, 100)
@@ -127,3 +129,6 @@ class Prisoners_Dilemma(Environment):
 
     def calculate_payoffs(self, actions):
         return [1 - a + 2*actions[int(self.fixture[idx])] for idx, a in enumerate(actions)]
+
+    def __str__(self):
+        return "Prisoner's_Dilemma"
