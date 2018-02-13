@@ -1,14 +1,16 @@
 import numpy as np
 
 class Environment(object):
-    def __init__(self, N_ACTIONS, N_PLAYERS, EPISODE_LENGTH):
+    def __init__(self, N_ACTIONS, N_PLAYERS, EPISODE_LENGTH, N_FEATURES = 0):
         self.n_actions = N_ACTIONS
         self.n_players = N_PLAYERS
+        self.n_features = N_FEATURES
         self.episode_length = EPISODE_LENGTH
         self.step_ctr = 0
         self.ep_ctr = 0
         self.actions_list = []
-        self.avg_rewards_per_round = []
+        self.avg_rewards_per_round = []        
+        self.reset()
 
     def step(self, actions):
         self.update_state(actions)
@@ -32,6 +34,12 @@ class Environment(object):
     def state_to_observation(self):
         return self.s
 
+    def update_state(self, actions):
+        pass
+
+    def initial_state(self):
+        return None
+
     def is_done(self):
         if self.step_ctr >= self.episode_length:
             self.avg_rewards_per_round.append(np.mean(self.stored_rewards,axis=1))
@@ -45,13 +53,11 @@ class Environment(object):
 class Public_Goods_Game(Environment):
     def __init__(self, HISTORY_LENGTH, N_PLAYERS, 
             multiplier = 2, punishment_cost = 0.2, punishment_strength = 1):
-        super().__init__(3, N_PLAYERS, 100)
-        self.n_features = HISTORY_LENGTH * N_PLAYERS
         self.multiplier = multiplier
         self.punishment_cost = punishment_cost
         self.punishment_strength = punishment_strength
         self.history_length = HISTORY_LENGTH
-        self.reset()
+        super().__init__(3, N_PLAYERS, 100, HISTORY_LENGTH * N_PLAYERS)
 
     def update_state(self, actions):
         if self.history_length > 0:
@@ -81,12 +87,10 @@ class Public_Goods_Game(Environment):
     def __str__(self):
         return "Public_Goods_Game"
 
-class Prisoners_Dilemma(Environment):
+class Multi_Agent_Random_Prisoners_Dilemma(Environment):
     def __init__(self, N_PLAYERS, rep_update_factor):
-        super().__init__(2, N_PLAYERS, 100)
-        self.n_features = N_PLAYERS**2+1
+        super().__init__(2, N_PLAYERS, 100, N_PLAYERS**2+1)
         self.rep_update_factor = rep_update_factor
-        self.reset()
         self.n_coop_defect_list = []
 
     def update_state(self, actions):
@@ -131,4 +135,14 @@ class Prisoners_Dilemma(Environment):
         return [1 - a + 2*actions[int(self.fixture[idx])] for idx, a in enumerate(actions)]
 
     def __str__(self):
-        return "Prisoner's_Dilemma"
+        return "Prisoner's Dilemma between randomly selected agents"
+
+class Prisoners_Dilemma(Environment):
+    def __init__(self):
+        super().__init__(2, 2, 100)
+
+    def calculate_payoffs(self, actions):
+        return [1 - a + 2*actions[idx+1] for idx, a in enumerate(actions)]
+
+    def __str__(self):
+        return "Prisoner's Dilemma"

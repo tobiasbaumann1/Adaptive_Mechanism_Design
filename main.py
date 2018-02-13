@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 #from IPD_env import IPD
-from Environments import Public_Goods_Game, Prisoners_Dilemma
+from Environments import Public_Goods_Game
 # from DQN_Agent import DQN_Agent
 #from Policy_Gradient_Agent import Policy_Gradient_Agent
 from Agents import Actor_Critic_Agent, Critic_Variant, Reputation_Bot
