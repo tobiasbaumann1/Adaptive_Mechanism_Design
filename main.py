@@ -1,10 +1,6 @@
 import matplotlib.pyplot as plt
-#from IPD_env import IPD
-from Environments import Public_Goods_Game
-# from DQN_Agent import DQN_Agent
-#from Policy_Gradient_Agent import Policy_Gradient_Agent
+from Environments import Prisoners_Dilemma
 from Agents import Actor_Critic_Agent, Critic_Variant, Reputation_Bot
-#from Static_IPD_Bots import *
 
 HISTORY_LENGTH = 5 # the NN will use the actions from this many past rounds to determine its action
 N_EPISODES = 500
@@ -60,7 +56,7 @@ def plot_results(avg_rewards_per_round, legend, str):
 def create_population(env,n_actor_critic_agents,n_reputation_bots = 0):    
     critic_variant = Critic_Variant.CENTRALIZED
     l = [Actor_Critic_Agent(env, 
-                  learning_rate=0.0001,
+                  learning_rate=0.01,
                   gamma=0.9,
                   agent_idx = i,
                   critic_variant = critic_variant) for i in range(n_actor_critic_agents)]
@@ -73,9 +69,9 @@ def create_population(env,n_actor_critic_agents,n_reputation_bots = 0):
 
 if __name__ == "__main__":
     # Initialize env and agents
-    env = Public_Goods_Game(HISTORY_LENGTH,N_PLAYERS, multiplier = 3, punishment_cost = 0.2, punishment_strength = 2)    
-    #env = Prisoners_Dilemma(N_PLAYERS, rep_update_factor = 1)    
-    agents = create_population(env,int(N_PLAYERS),0)
+    #env = Public_Goods_Game(HISTORY_LENGTH,N_PLAYERS, multiplier = 3, punishment_cost = 0.2, punishment_strength = 2)    
+    env = Prisoners_Dilemma()    
+    agents = create_population(env,2)
     
     avg_rewards_per_round = run_game(N_EPISODES,agents)
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__())
