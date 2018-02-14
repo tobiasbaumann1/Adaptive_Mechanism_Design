@@ -20,9 +20,14 @@ def run_game(N_EPISODES, players):
                 actions = [player.choose_action(s[idx]) for idx, player in enumerate(players)]
             else:
                 actions = [player.choose_action(s) for player in players]
+            
 
             # take action and get next s and reward
             s_, rewards, done = env.step(actions)
+            # print('Actions:',actions)
+            # print('State after:',s_)
+            # print('Rewards:',rewards)
+            # print('Done:',done)
 
             for idx, player in enumerate(players):
                 if flag:
@@ -44,14 +49,22 @@ def run_game(N_EPISODES, players):
             print('Episode {} finished.'.format(episode + 1))
     return env.get_avg_rewards_per_round()
 
-def plot_results(avg_rewards_per_round, legend, str):
-    for idx in range(avg_rewards_per_round.shape[1]):
-        plt.plot(avg_rewards_per_round[:,idx])
+def plot_results(avg_rewards_per_round, legend, label, exp_factor = 1):
+    plt.figure()
+    for agent_idx in range(avg_rewards_per_round.shape[1]):
+        avg = avg_rewards_per_round[0,agent_idx]
+        avg_list = []
+        for r in avg_rewards_per_round[:,agent_idx]:
+            avg = exp_factor * r + (1-exp_factor) * avg
+            avg_list.append(avg)
+        first_idx = int(1 / exp_factor)
+        plt.plot(range(first_idx,len(avg_list)),avg_list[first_idx:])
     plt.xlabel('Episode')
-    plt.ylabel('Average reward per round')
+    plt.ylabel('Reward')
     plt.legend(legend)
-    plt.savefig('./'+str)
-    plt.show()
+    plt.title(label)
+    plt.savefig('./'+label)
+    #plt.show()
 
 def create_population(env,n_actor_critic_agents,n_reputation_bots = 0):    
     critic_variant = Critic_Variant.CENTRALIZED
@@ -70,8 +83,16 @@ def create_population(env,n_actor_critic_agents,n_reputation_bots = 0):
 if __name__ == "__main__":
     # Initialize env and agents
     #env = Public_Goods_Game(HISTORY_LENGTH,N_PLAYERS, multiplier = 3, punishment_cost = 0.2, punishment_strength = 2)    
-    env = Prisoners_Dilemma()    
+    env = Prisoners_Dilemma(signal_possible = True, option_to_abstain = True)    
     agents = create_population(env,2)
     
-    avg_rewards_per_round = run_game(N_EPISODES,agents)
-    plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__())
+    avg_rewards_per_round = 2 * run_game(N_EPISODES,agents)
+    plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__(), exp_factor=0.1)
+    for agent in agents:
+        agent.close()
+
+    env = Prisoners_Dilemma(signal_possible = True, option_to_abstain = False)    
+    agents = create_population(env,2)
+    
+    avg_rewards_per_round = 2 * run_game(N_EPISODES,agents)
+    plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__(), exp_factor=0.1)

@@ -31,6 +31,14 @@ class Agent(object):
     def pass_agent_list(self, agent_list):
         pass
 
+    def close(self):
+        self.sess.close()
+        tf.reset_default_graph()
+
+    def reset(self):
+        self.sess.run(tf.global_variables_initializer())
+
+
 class Actor_Critic_Agent(Agent):
     def __init__(self, env, learning_rate=0.001, n_units_actor = 20, 
             n_units_critic = 20, gamma = 0.95, agent_idx = 0, 
@@ -49,7 +57,7 @@ class Actor_Critic_Agent(Agent):
             self.actor.learn(self.sess,s,a,td)
 
     def __str__(self):
-        return 'ActorCriticAgent_'+str(self.agent_idx)
+        return 'Actor_Critic_Agent_'+str(self.agent_idx)
 
     def calc_action_probs(self, s):
         return self.actor.calc_action_probs(self.sess,s)

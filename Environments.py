@@ -13,10 +13,10 @@ class Environment(object):
         self.reset()
 
     def step(self, actions):
-        self.update_state(actions)
         self.actions_list.append(actions)
         rewards = self.calculate_payoffs(actions)
         self.stored_rewards[:,self.step_ctr] = rewards
+        self.update_state(actions)
         self.step_ctr += 1
         return self.state_to_observation(), rewards, self.is_done()
 
@@ -143,7 +143,8 @@ class Prisoners_Dilemma(Environment):
         self.option_to_abstain = option_to_abstain
         N_ACTIONS = 3 if option_to_abstain else 2
         N_FEATURES = 3 if signal_possible else 1
-        super().__init__(N_ACTIONS, 2, 1, N_FEATURES)
+        EPISODE_LENGTH = 2 if signal_possible else 1
+        super().__init__(N_ACTIONS, 2, EPISODE_LENGTH, N_FEATURES)
 
     def initial_state(self):
         if self.signal_possible:
@@ -155,21 +156,27 @@ class Prisoners_Dilemma(Environment):
         if self.signal_possible:
             if self.s[0] == 0: # 0 corresponds to being in the communication phase, 1 in the actual execution phase
                 self.s[0] = 1 
-                self.s[1] = actions[0]
-                self.s[2] = actions[1]
+                self.s[1] = min(actions[0],1)
+                self.s[2] = min(actions[1],1)
         else:
             pass
 
     def calculate_payoffs(self, actions):
-        if self.option_to_abstain and 2 in actions:
-            return [0] * 2
+        if self.signal_possible and self.s[0] == 0:
+            return [0] * 2 # no rewards in communication step
         else:
-            r0 = -1 - 2 * actions[0] + 4*actions[1] 
-            r1 = -1 - 2 * actions[1] + 4*actions[0] 
-            if self.signal_possible:
-                r0 = r0 - 4 * self.s[1]*(1-actions[0])
-                r1 = r1 - 4 * self.s[2]*(1-actions[1])
-            return [r0,r1]
+            if self.option_to_abstain and 2 in actions:
+                return [0] * 2
+            else:
+                r0 = -1 - 2 * actions[0] + 4*actions[1] 
+                r1 = -1 - 2 * actions[1] + 4*actions[0] 
+                if self.signal_possible:
+                    r0 = r0 - 4 * self.s[1]*(1-actions[0])
+                    r1 = r1 - 4 * self.s[2]*(1-actions[1])
+                return [r0,r1]
 
     def __str__(self):
-        return "Prisoner's Dilemma"
+        description = "Prisoner's_dilemma"
+        if self.option_to_abstain:
+            description = description + "_with_option_to_abstain" 
+        return description
