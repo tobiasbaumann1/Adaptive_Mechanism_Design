@@ -7,7 +7,7 @@ N_EPISODES = 500
 N_PLAYERS = 4
 N_UNITS = 64 #number of nodes in the intermediate layer of the NN
 
-def run_game(N_EPISODES, players):
+def run_game(N_EPISODES, players, policing_agent = None):
     env.reset_ep_ctr()
     for episode in range(N_EPISODES):
         # initial observation
@@ -24,6 +24,10 @@ def run_game(N_EPISODES, players):
 
             # take action and get next s and reward
             s_, rewards, done = env.step(actions)
+
+            if policing_agent is not None:
+                extra_rewards = policing_agent.choose_action(s,actions)
+                rewards = [ sum(r) for r in zip(rewards,extra_rewards)]
             # print('Actions:',actions)
             # print('State after:',s_)
             # print('Rewards:',rewards)
