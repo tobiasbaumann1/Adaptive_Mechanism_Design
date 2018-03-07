@@ -53,7 +53,6 @@ def run_game(N_EPISODES, players, policing_agent = None):
                     player.learn_at_episode_end() 
                 break
 
-        print(cum_policing_rs)
         avg_policing_rewards_per_round.append([r / env.step_ctr for r in cum_policing_rs])
 
         # status updates

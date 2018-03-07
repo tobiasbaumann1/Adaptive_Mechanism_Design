@@ -182,7 +182,7 @@ class Policing_Agent(Agent):
         self.n_features = env.n_features + env.n_players
 
         self.inputs = tf.placeholder(tf.float32, [1, self.n_features], "inputs") #inputs are state and actions
-        self.a = tf.placeholder(tf.float32, None, "act")
+        self.a = tf.placeholder(tf.int32, None, "act")
         #self.td_error = tf.placeholder(tf.float32, None, "td_error")  # TD_error
 
         with tf.variable_scope('Policy_Network'):
@@ -203,8 +203,32 @@ class Policing_Agent(Agent):
                 bias_initializer=tf.constant_initializer(0),  # biases
                 name='actions_policing'
             )
+                    
 
-        # Another network for V1p, V2p. 
+        with tf.variable_scope('V1p'):
+            # V1p is trivial to calculate in this special case
+            self.v1p = 4 * (self.actions_prob[0,2] - self.actions_prob[0,0])
+        # # Another network for V1p, V2p. 
+        #     l1 = tf.layers.dense(
+        #         inputs=self.inputs, #add state here later on
+        #         units=n_units,    # number of hidden units
+        #         activation=tf.nn.relu,
+        #         kernel_initializer=tf.random_normal_initializer(0., .1),    # weights
+        #         bias_initializer=tf.constant_initializer(0),  # biases
+        #         name='l1_policing_v1p'
+        #     )
+
+        #     self.v1p = tf.layers.dense(
+        #         inputs=l1,
+        #         units=1,    # output units
+        #         activation=None,
+        #         kernel_initializer=tf.random_normal_initializer(0., .1),  # weights
+        #         bias_initializer=tf.constant_initializer(0),  # biases
+        #         name='v1p'
+        #     )
+
+
+
 
         # Gradients of that w.r.t. theta_1, theta_2. Perhaps via log_prob? Use that in train_op
 
