@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
+import numpy as np
 from Environments import Prisoners_Dilemma
-from Agents import Actor_Critic_Agent, Critic_Variant, Reputation_Bot
-
+from Agents import Actor_Critic_Agent, Critic_Variant, Policing_Agent
 HISTORY_LENGTH = 5 # the NN will use the actions from this many past rounds to determine its action
 N_EPISODES = 500
 N_PLAYERS = 4
@@ -9,11 +9,13 @@ N_UNITS = 64 #number of nodes in the intermediate layer of the NN
 
 def run_game(N_EPISODES, players, policing_agent = None):
     env.reset_ep_ctr()
+    avg_policing_rewards_per_round = []
     for episode in range(N_EPISODES):
         # initial observation
         s = env.reset()
         flag = isinstance(s, list)
 
+        cum_policing_rs = [0]*len(players)
         while True:
             # choose action based on s
             if flag:
@@ -26,8 +28,11 @@ def run_game(N_EPISODES, players, policing_agent = None):
             s_, rewards, done = env.step(actions)
 
             if policing_agent is not None:
-                extra_rewards = policing_agent.choose_action(s,actions)
-                rewards = [ sum(r) for r in zip(rewards,extra_rewards)]
+                assert(len(players) == 2) #temporary
+                policing_action = policing_agent.choose_action(s,actions)
+                policing_rs = [4 * (policing_action-1), -4 * (policing_action-1)]
+                rewards = [ sum(r) for r in zip(rewards,policing_rs)]
+                cum_policing_rs = [sum(r) for r in zip(cum_policing_rs, policing_rs)]
             # print('Actions:',actions)
             # print('State after:',s_)
             # print('Rewards:',rewards)
@@ -48,10 +53,13 @@ def run_game(N_EPISODES, players, policing_agent = None):
                     player.learn_at_episode_end() 
                 break
 
+        print(cum_policing_rs)
+        avg_policing_rewards_per_round.append([r / env.step_ctr for r in cum_policing_rs])
+
         # status updates
         if (episode+1) % 10 == 0:
             print('Episode {} finished.'.format(episode + 1))
-    return env.get_avg_rewards_per_round()
+    return env.get_avg_rewards_per_round(), np.asarray(avg_policing_rewards_per_round)
 
 def plot_results(avg_rewards_per_round, legend, label, exp_factor = 1):
     plt.figure()
@@ -70,14 +78,13 @@ def plot_results(avg_rewards_per_round, legend, label, exp_factor = 1):
     plt.savefig('./'+label)
     #plt.show()
 
-def create_population(env,n_actor_critic_agents,n_reputation_bots = 0):    
+def create_population(env,n_actor_critic_agents):    
     critic_variant = Critic_Variant.CENTRALIZED
     l = [Actor_Critic_Agent(env, 
                   learning_rate=0.01,
                   gamma=0.9,
                   agent_idx = i,
                   critic_variant = critic_variant) for i in range(n_actor_critic_agents)]
-    l.extend([Reputation_Bot(env,i+n_actor_critic_agents) for i in range(n_reputation_bots)])
     #Pass list of agents for centralized critic
     if critic_variant is Critic_Variant.CENTRALIZED:
         for agent in l:
@@ -87,16 +94,19 @@ def create_population(env,n_actor_critic_agents,n_reputation_bots = 0):
 if __name__ == "__main__":
     # Initialize env and agents
     #env = Public_Goods_Game(HISTORY_LENGTH,N_PLAYERS, multiplier = 3, punishment_cost = 0.2, punishment_strength = 2)    
-    env = Prisoners_Dilemma(signal_possible = True, option_to_abstain = True)    
-    agents = create_population(env,2)
+    # env = Prisoners_Dilemma(signal_possible = True, option_to_abstain = True)    
+    # agents = create_population(env,2)
     
-    avg_rewards_per_round = 2 * run_game(N_EPISODES,agents)
-    plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__(), exp_factor=0.1)
-    for agent in agents:
-        agent.close()
+    # avg_rewards_per_round = 2 * run_game(N_EPISODES,agents)
+    # plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__(), exp_factor=0.1)
+    # for agent in agents:
+    #     agent.close()
 
-    env = Prisoners_Dilemma(signal_possible = True, option_to_abstain = False)    
+    env = Prisoners_Dilemma()    
     agents = create_population(env,2)
+    policing_agent = Policing_Agent(env,agents)
+
     
-    avg_rewards_per_round = 2 * run_game(N_EPISODES,agents)
+    avg_rewards_per_round,avg_policing_rewards_per_round = run_game(N_EPISODES,agents,policing_agent)
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__(), exp_factor=0.1)
+    plot_results(avg_policing_rewards_per_round,[str(agent) for agent in agents],env.__str__()+'_policing_rewards', exp_factor=0.1)

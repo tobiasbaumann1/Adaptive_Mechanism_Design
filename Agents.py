@@ -106,8 +106,6 @@ class Actor(object):
     def calc_action_probs(self, sess, s):
         s = s[np.newaxis, :]
         probs = sess.run(self.actions_prob, {self.s: s})   # get probabilities for all actions
-        if np.isnan(probs).any():
-            print(probs)
         return probs
 
 class Critic(object):
@@ -176,25 +174,64 @@ class Critic(object):
                                           {self.nn_inputs: nn_inputs, self.v_: v_, self.r: r})
         return td_error
 
-class Reputation_Bot(Agent):
-    def __init__(self, env, agent_idx):
-        super().__init__(env, agent_idx=agent_idx)
+class Policing_Agent(Agent):
+    def __init__(self, env, agent_list, learning_rate=0.01, n_units = 20, gamma = 0.95):
+        super().__init__(env, learning_rate, gamma)
+        self.agent_list = agent_list
+        self.n_policing_actions = 3
+        self.n_features = env.n_features + env.n_players
 
-    def calc_action_probs(self,s):
-        opponent_idx = int(s[0])
-        assert (self.agent_idx != opponent_idx)
-        reputation_table = np.reshape(s[1:],(self.env.n_players,self.env.n_players))
-        opponent_reputation = reputation_table[opponent_idx,self.agent_idx]
-        p_coop = opponent_reputation
-        p_defect = 1 - p_coop
-        probs = np.array([p_defect,p_coop])[np.newaxis,:]
-        # if opponent_idx == self.agent_idx:
-        #     print(opponent_idx)
-        #     print(s)
-        return probs
+        self.inputs = tf.placeholder(tf.float32, [1, self.n_features], "inputs") #inputs are state and actions
+        self.a = tf.placeholder(tf.float32, None, "act")
+        #self.td_error = tf.placeholder(tf.float32, None, "td_error")  # TD_error
 
-    def learn(self, s, a, r, s_, *args):
+        with tf.variable_scope('Policy_Network'):
+            l1 = tf.layers.dense(
+                inputs=self.inputs,
+                units=n_units,    # number of hidden units
+                activation=tf.nn.relu,
+                kernel_initializer=tf.random_normal_initializer(0., .1),    # weights
+                bias_initializer=tf.constant_initializer(0),  # biases
+                name='l1_policing'
+            )
+
+            self.actions_prob = tf.layers.dense(
+                inputs=l1,
+                units=self.n_policing_actions,    # output units
+                activation=tf.nn.softmax,
+                kernel_initializer=tf.random_normal_initializer(0., .1),  # weights
+                bias_initializer=tf.constant_initializer(0),  # biases
+                name='actions_policing'
+            )
+
+        # Another network for V1p, V2p. 
+
+        # Gradients of that w.r.t. theta_1, theta_2. Perhaps via log_prob? Use that in train_op
+
+        # Gradients of V w.r.t. theta_1, theta_2: Get from critics
+
+        # with tf.variable_scope('Error'):
+        #     log_prob = tf.log(self.actions_prob[0, self.a])
+        #     self.exp_v = tf.reduce_mean(log_prob * self.td_error)  
+
+        # with tf.variable_scope('trainPolicingAgent'):
+        #     self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(-self.exp_v)  
+
+        self.sess.run(tf.global_variables_initializer())
+
+    def learn(self, s, a1, a2, r1, r1p, r2, r2p):
+        #assume episode length 1 for the time being
+        #call train op with right loss
+        #Train V1p, V2p
         pass
 
-    def __str__(self):
-        return 'ReputationBot_'+str(self.agent_idx)
+    def choose_action(self, s, actions):
+        action_probs = self.calc_action_probs(s, actions)
+        action = np.random.choice(range(action_probs.shape[1]), p=action_probs.ravel())  # select action w.r.t the actions prob
+        return action
+
+    def calc_action_probs(self, s, actions):
+        inputs = np.hstack((s,np.array(actions)))
+        inputs = inputs[np.newaxis,:]
+        probs = self.sess.run(self.actions_prob, {self.inputs: inputs})   # get probabilities for all actions
+        return probs
