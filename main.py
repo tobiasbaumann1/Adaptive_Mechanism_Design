@@ -3,9 +3,9 @@ import numpy as np
 from Environments import Prisoners_Dilemma
 from Agents import Actor_Critic_Agent, Critic_Variant, Policing_Agent
 HISTORY_LENGTH = 5 # the NN will use the actions from this many past rounds to determine its action
-N_EPISODES = 500
+N_EPISODES = 3000
 N_PLAYERS = 4
-N_UNITS = 64 #number of nodes in the intermediate layer of the NN
+N_UNITS = 1 #number of nodes in the intermediate layer of the NN
 
 def run_game(N_EPISODES, players, policing_agent = None):
     env.reset_ep_ctr()
@@ -29,10 +29,13 @@ def run_game(N_EPISODES, players, policing_agent = None):
 
             if policing_agent is not None:
                 assert(len(players) == 2) #temporary
-                policing_action = policing_agent.choose_action(s,actions)
-                policing_rs = [4 * (policing_action-1), -4 * (policing_action-1)]
+                policing_action = policing_agent.choose_action(s,actions[0])
+                policing_rs = [4 * (policing_action-1), 0]
                 rewards = [ sum(r) for r in zip(rewards,policing_rs)]
+                print('Rewards: ', rewards)
                 cum_policing_rs = [sum(r) for r in zip(cum_policing_rs, policing_rs)]
+                # Training policing agent
+                policing_agent.learn(s,actions[0])
             # print('Actions:',actions)
             # print('State after:',s_)
             # print('Rewards:',rewards)
@@ -80,8 +83,9 @@ def plot_results(avg_rewards_per_round, legend, label, exp_factor = 1):
 def create_population(env,n_actor_critic_agents):    
     critic_variant = Critic_Variant.CENTRALIZED
     l = [Actor_Critic_Agent(env, 
-                  learning_rate=0.01,
+                  learning_rate=0.005,
                   gamma=0.9,
+                  n_units_actor = N_UNITS,
                   agent_idx = i,
                   critic_variant = critic_variant) for i in range(n_actor_critic_agents)]
     #Pass list of agents for centralized critic
@@ -105,7 +109,6 @@ if __name__ == "__main__":
     agents = create_population(env,2)
     policing_agent = Policing_Agent(env,agents)
 
-    
     avg_rewards_per_round,avg_policing_rewards_per_round = run_game(N_EPISODES,agents,policing_agent)
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__(), exp_factor=0.1)
     plot_results(avg_policing_rewards_per_round,[str(agent) for agent in agents],env.__str__()+'_policing_rewards', exp_factor=0.1)

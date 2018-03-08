@@ -1,8 +1,8 @@
 import numpy as np
 import tensorflow as tf
 
-np.random.seed(2)
-tf.set_random_seed(2)
+np.random.seed(4)
+tf.set_random_seed(4)
 
 from enum import Enum, auto
 class Critic_Variant(Enum):
@@ -65,6 +65,12 @@ class Actor_Critic_Agent(Agent):
     def pass_agent_list(self, agent_list):
         self.critic.pass_agent_list(agent_list)
 
+    def get_action_prob_variable(self):
+        return self.actor.actions_prob
+
+    def get_policy_parameters(self):
+        return [self.actor.w_l1,self.actor.b_l1,self.actor.w_pi1,self.actor.b_pi1]
+
 class Actor(object):
     def __init__(self, env, n_units = 20, learning_rate=0.001, agent_idx = 0):
         self.s = tf.placeholder(tf.float32, [1, env.n_features], "state")
@@ -72,23 +78,15 @@ class Actor(object):
         self.td_error = tf.placeholder(tf.float32, None, "td_error")  # TD_error
 
         with tf.variable_scope('Actor'):
-            l1 = tf.layers.dense(
-                inputs=self.s,
-                units=n_units,    # number of hidden units
-                activation=tf.nn.relu,
-                kernel_initializer=tf.random_normal_initializer(0., .1),    # weights
-                bias_initializer=tf.constant_initializer(0.1),  # biases
-                name='l1'+str(agent_idx)
-            )
+            self.w_l1 = tf.Variable(tf.random_normal([env.n_features,n_units],stddev=0.1))
+            self.b_l1 = tf.Variable(tf.random_normal([n_units],stddev=0.1))
+             
+            self.l1 = tf.nn.relu(tf.matmul(self.s, self.w_l1) + self.b_l1)
 
-            self.actions_prob = tf.layers.dense(
-                inputs=l1,
-                units=env.n_actions,    # output units
-                activation=tf.nn.softmax,   # get action probabilities
-                kernel_initializer=tf.random_normal_initializer(0., .1),  # weights
-                bias_initializer=tf.constant_initializer(0.1),  # biases
-                name='actions_prob'+str(agent_idx)
-            )
+            self.w_pi1 = tf.Variable(tf.random_normal([n_units,env.n_actions],stddev=0.1))
+            self.b_pi1 = tf.Variable(tf.random_normal([env.n_actions],stddev=0.1))
+             
+            self.actions_prob = tf.nn.softmax(tf.matmul(self.l1, self.w_pi1) + self.b_pi1)
 
         with tf.variable_scope('exp_v'):
             log_prob = tf.log(self.actions_prob[0, self.a])
@@ -175,15 +173,17 @@ class Critic(object):
         return td_error
 
 class Policing_Agent(Agent):
-    def __init__(self, env, agent_list, learning_rate=0.01, n_units = 20, gamma = 0.95):
+    def __init__(self, env, agent_list, learning_rate=0.001, n_units = 4, gamma = 0.95):
         super().__init__(env, learning_rate, gamma)
         self.agent_list = agent_list
-        self.n_policing_actions = 3
-        self.n_features = env.n_features + env.n_players
+        self.n_policing_actions = 2
+        self.n_features = env.n_features + env.n_actions
 
-        self.inputs = tf.placeholder(tf.float32, [1, self.n_features], "inputs") #inputs are state and actions
-        self.a = tf.placeholder(tf.int32, None, "act")
-        #self.td_error = tf.placeholder(tf.float32, None, "td_error")  # TD_error
+        self.s = tf.placeholder(tf.float32, [1, env.n_features], "state")
+        self.pi1_action_probs = tf.placeholder(tf.float32, [1, env.n_actions], "player1_action_probs")
+        #self.a = tf.placeholder(tf.int32, None, "policing_action")
+        self.a_player = tf.placeholder(tf.float32, None, "player1_action")
+        self.inputs = tf.concat([self.s,tf.reshape(self.a_player,(1,1))],1)
 
         with tf.variable_scope('Policy_Network'):
             l1 = tf.layers.dense(
@@ -203,59 +203,50 @@ class Policing_Agent(Agent):
                 bias_initializer=tf.constant_initializer(0),  # biases
                 name='actions_policing'
             )
-                    
 
         with tf.variable_scope('V1p'):
             # V1p is trivial to calculate in this special case
-            self.v1p = 4 * (self.actions_prob[0,2] - self.actions_prob[0,0])
-        # # Another network for V1p, V2p. 
-        #     l1 = tf.layers.dense(
-        #         inputs=self.inputs, #add state here later on
-        #         units=n_units,    # number of hidden units
-        #         activation=tf.nn.relu,
-        #         kernel_initializer=tf.random_normal_initializer(0., .1),    # weights
-        #         bias_initializer=tf.constant_initializer(0),  # biases
-        #         name='l1_policing_v1p'
-        #     )
+            self.v1p = -4 * self.actions_prob[0,0]
 
-        #     self.v1p = tf.layers.dense(
-        #         inputs=l1,
-        #         units=1,    # output units
-        #         activation=None,
-        #         kernel_initializer=tf.random_normal_initializer(0., .1),  # weights
-        #         bias_initializer=tf.constant_initializer(0),  # biases
-        #         name='v1p'
-        #     )
+        with tf.variable_scope('V_total'):
+            # V is trivial to calculate in this special case
+            self.v = 2 * (self.pi1_action_probs[0,1] - self.pi1_action_probs[0,0])
 
+        with tf.variable_scope('cost_function'):
+            # Gradients w.r.t. theta_1
+            log_prob_pi1 = tf.log(agent_list[0].get_action_prob_variable()[0,tf.cast(self.a_player,dtype = tf.int32)])
+            theta_1 = agent_list[0].get_policy_parameters()
+            #theta_1 = tf.concat([tf.reshape(param,[-1]) for param in theta_1],0)
+            g_log_prob = [tf.gradients(log_prob_pi1,param) for param in theta_1]
+            g_log_prob = tf.concat([tf.reshape(param,[-1]) for param in g_log_prob],0)
 
+            # policy gradient theorem
+            g_V1p_d1 = g_log_prob * self.v1p
+            g_V_d1 = g_log_prob * self.v
 
+            cost = - agent_list[0].learning_rate * tf.tensordot(g_V1p_d1,g_V_d1,1)
 
-        # Gradients of that w.r.t. theta_1, theta_2. Perhaps via log_prob? Use that in train_op
-
-        # Gradients of V w.r.t. theta_1, theta_2: Get from critics
-
-        # with tf.variable_scope('Error'):
-        #     log_prob = tf.log(self.actions_prob[0, self.a])
-        #     self.exp_v = tf.reduce_mean(log_prob * self.td_error)  
-
-        # with tf.variable_scope('trainPolicingAgent'):
-        #     self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(-self.exp_v)  
+        with tf.variable_scope('trainPolicingAgent'):
+            self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(cost)  #STOP GRADIENT
 
         self.sess.run(tf.global_variables_initializer())
 
-    def learn(self, s, a1, a2, r1, r1p, r2, r2p):
-        #assume episode length 1 for the time being
-        #call train op with right loss
-        #Train V1p, V2p
-        pass
+    def learn(self, s, a_player):
+        player_action_probs = self.agent_list[0].calc_action_probs(s)
+        s = s[np.newaxis,:]
+        feed_dict = {self.s: s, self.a_player: a_player, self.pi1_action_probs: player_action_probs, 
+                    self.agent_list[0].actor.s: s}
+        self.sess.run([self.train_op], feed_dict)
 
-    def choose_action(self, s, actions):
-        action_probs = self.calc_action_probs(s, actions)
+    def choose_action(self, s, a):
+        action_probs = self.calc_action_probs(s, a)
         action = np.random.choice(range(action_probs.shape[1]), p=action_probs.ravel())  # select action w.r.t the actions prob
         return action
 
-    def calc_action_probs(self, s, actions):
-        inputs = np.hstack((s,np.array(actions)))
-        inputs = inputs[np.newaxis,:]
-        probs = self.sess.run(self.actions_prob, {self.inputs: inputs})   # get probabilities for all actions
+    def calc_action_probs(self, s, a):
+        print('Player action: ',a)
+        s = s[np.newaxis,:]
+        probs = self.sess.run(self.actions_prob, {self.s: s, self.a_player: a})   # get probabilities for all actions
+        #probs = np.array([[1,0]]) if a == 0 else np.array([[0,1]])
+        print('Policing probabilities: ', probs)
         return probs
