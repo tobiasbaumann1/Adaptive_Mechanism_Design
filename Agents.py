@@ -173,30 +173,30 @@ class Critic(object):
         return td_error
 
 class Policing_Agent(Agent):
-    def __init__(self, env, agent_list, learning_rate=0.001, n_units = 4, gamma = 0.95):
+    def __init__(self, env, agent_list, learning_rate=0.01, n_units = 4, gamma = 0.95):
         super().__init__(env, learning_rate, gamma)
         self.agent_list = agent_list
         self.n_policing_actions = 2
         self.n_features = env.n_features + env.n_actions
 
         self.s = tf.placeholder(tf.float32, [1, env.n_features], "state")
-        self.pi1_action_probs = tf.placeholder(tf.float32, [1, env.n_actions], "player1_action_probs")
+        #self.pi1_action_probs = tf.placeholder(tf.float32, [1, env.n_actions], "player1_action_probs")
         #self.a = tf.placeholder(tf.int32, None, "policing_action")
         self.a_player = tf.placeholder(tf.float32, None, "player1_action")
         self.inputs = tf.concat([self.s,tf.reshape(self.a_player,(1,1))],1)
 
         with tf.variable_scope('Policy_Network'):
-            l1 = tf.layers.dense(
-                inputs=self.inputs,
-                units=n_units,    # number of hidden units
-                activation=tf.nn.relu,
-                kernel_initializer=tf.random_normal_initializer(0., .1),    # weights
-                bias_initializer=tf.constant_initializer(0),  # biases
-                name='l1_policing'
-            )
+            # l1 = tf.layers.dense(
+            #     inputs=self.inputs,
+            #     units=n_units,    # number of hidden units
+            #     activation=tf.nn.relu,
+            #     kernel_initializer=tf.random_normal_initializer(0., .1),    # weights
+            #     bias_initializer=tf.constant_initializer(0),  # biases
+            #     name='l1_policing'
+            # )
 
             self.actions_prob = tf.layers.dense(
-                inputs=l1,
+                inputs=self.inputs,
                 units=self.n_policing_actions,    # output units
                 activation=tf.nn.softmax,
                 kernel_initializer=tf.random_normal_initializer(0., .1),  # weights
@@ -210,7 +210,7 @@ class Policing_Agent(Agent):
 
         with tf.variable_scope('V_total'):
             # V is trivial to calculate in this special case
-            self.v = 2 * (self.pi1_action_probs[0,1] - self.pi1_action_probs[0,0])
+            self.v = 4 * (self.a_player - 0.5)
 
         with tf.variable_scope('cost_function'):
             # Gradients w.r.t. theta_1
@@ -232,11 +232,12 @@ class Policing_Agent(Agent):
         self.sess.run(tf.global_variables_initializer())
 
     def learn(self, s, a_player):
-        player_action_probs = self.agent_list[0].calc_action_probs(s)
+        #player_action_probs = self.agent_list[0].calc_action_probs(s)
         s = s[np.newaxis,:]
-        feed_dict = {self.s: s, self.a_player: a_player, self.pi1_action_probs: player_action_probs, 
-                    self.agent_list[0].actor.s: s}
+        feed_dict = {self.s: s, self.a_player: a_player, self.agent_list[0].actor.s: s}
         self.sess.run([self.train_op], feed_dict)
+        #feed_dict = {self.a_player: a_player}
+        #print(self.sess.run([self.v], feed_dict))
 
     def choose_action(self, s, a):
         action_probs = self.calc_action_probs(s, a)

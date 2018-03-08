@@ -3,7 +3,7 @@ import numpy as np
 from Environments import Prisoners_Dilemma
 from Agents import Actor_Critic_Agent, Critic_Variant, Policing_Agent
 HISTORY_LENGTH = 5 # the NN will use the actions from this many past rounds to determine its action
-N_EPISODES = 3000
+N_EPISODES = 1000
 N_PLAYERS = 4
 N_UNITS = 1 #number of nodes in the intermediate layer of the NN
 
