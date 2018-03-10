@@ -173,11 +173,10 @@ class Critic(object):
         return td_error
 
 class Policing_Agent(Agent):
-    def __init__(self, env, agent_list, learning_rate=0.01, n_units = 4, gamma = 0.95):
+    def __init__(self, env, policed_agent, learning_rate=0.01, n_units = 4, gamma = 0.95):
         super().__init__(env, learning_rate, gamma)
-        self.agent_list = agent_list
         self.n_policing_actions = 2
-        self.n_features = env.n_features + env.n_actions
+        self.n_features = env.n_features + env.n_actions * env.n_players
 
         self.s = tf.placeholder(tf.float32, [1, env.n_features], "state")
         #self.pi1_action_probs = tf.placeholder(tf.float32, [1, env.n_actions], "player1_action_probs")
@@ -185,7 +184,7 @@ class Policing_Agent(Agent):
         self.a_player = tf.placeholder(tf.float32, None, "player1_action")
         self.inputs = tf.concat([self.s,tf.reshape(self.a_player,(1,1))],1)
 
-        with tf.variable_scope('Policy_Network'):
+        with tf.variable_scope('Policy_p_Network'):
             # l1 = tf.layers.dense(
             #     inputs=self.inputs,
             #     units=n_units,    # number of hidden units
@@ -204,27 +203,28 @@ class Policing_Agent(Agent):
                 name='actions_policing'
             )
 
-        with tf.variable_scope('V1p'):
-            # V1p is trivial to calculate in this special case
-            self.v1p = -2 * (1 + tf.sign(self.action_layer[0,0]-self.action_layer[0,1]))
+        with tf.variable_scope('Vp'):
+            # Vp is trivial to calculate in this special case
+            self.vp = 4 * (tf.argmax(self.action_layer,axis=1)-1)
+            #self.v2p = -self.vp
 
         with tf.variable_scope('V_total'):
             # V is trivial to calculate in this special case
-            self.v = 4 * (self.a_player - 0.5)
+            self.v = -4 * (self.a_player - 0.5)
 
         with tf.variable_scope('cost_function'):
             # Gradients w.r.t. theta_1
-            log_prob_pi1 = tf.log(agent_list[0].get_action_prob_variable()[0,tf.cast(self.a_player,dtype = tf.int32)])
-            theta_1 = agent_list[0].get_policy_parameters()
+            log_prob_pi = tf.log(policed_agent.get_action_prob_variable()[0,tf.cast(self.a_player,dtype = tf.int32)])
+            theta = policed_agent.get_policy_parameters()
             #theta_1 = tf.concat([tf.reshape(param,[-1]) for param in theta_1],0)
-            g_log_prob = [tf.gradients(log_prob_pi1,param) for param in theta_1]
+            g_log_prob = [tf.gradients(log_prob_pi,param) for param in theta]
             g_log_prob = tf.concat([tf.reshape(param,[-1]) for param in g_log_prob],0)
 
             # policy gradient theorem
-            g_V1p_d1 = g_log_prob * self.v1p
-            g_V_d1 = g_log_prob * self.v
+            g_Vp_d = g_log_prob * self.vp
+            g_V_d = g_log_prob * self.v
 
-            cost = - agent_list[0].learning_rate * tf.tensordot(g_V1p_d1,g_V_d1,1)
+            cost = - policed_agent.learning_rate * tf.tensordot(g_Vp_d,g_V_d,1)
 
         with tf.variable_scope('trainPolicingAgent'):
             self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(cost)  #STOP GRADIENT

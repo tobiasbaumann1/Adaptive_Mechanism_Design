@@ -107,7 +107,7 @@ if __name__ == "__main__":
 
     env = Prisoners_Dilemma()    
     agents = create_population(env,2)
-    policing_agent = Policing_Agent(env,agents)
+    policing_agent = Policing_Agent(env,agents[0])
 
     avg_rewards_per_round,avg_policing_rewards_per_round = run_game(N_EPISODES,agents,policing_agent)
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__(), exp_factor=0.1)
