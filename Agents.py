@@ -195,10 +195,10 @@ class Policing_Agent(Agent):
             #     name='l1_policing'
             # )
 
-            self.actions_prob = tf.layers.dense(
+            self.action_layer = tf.layers.dense(
                 inputs=self.inputs,
                 units=self.n_policing_actions,    # output units
-                activation=tf.nn.softmax,
+                activation=None,
                 kernel_initializer=tf.random_normal_initializer(0., .1),  # weights
                 bias_initializer=tf.constant_initializer(0),  # biases
                 name='actions_policing'
@@ -206,7 +206,7 @@ class Policing_Agent(Agent):
 
         with tf.variable_scope('V1p'):
             # V1p is trivial to calculate in this special case
-            self.v1p = -4 * self.actions_prob[0,0]
+            self.v1p = -2 * (1 + tf.sign(self.action_layer[0,0]-self.action_layer[0,1]))
 
         with tf.variable_scope('V_total'):
             # V is trivial to calculate in this special case
@@ -240,14 +240,15 @@ class Policing_Agent(Agent):
         #print(self.sess.run([self.v], feed_dict))
 
     def choose_action(self, s, a):
-        action_probs = self.calc_action_probs(s, a)
-        action = np.random.choice(range(action_probs.shape[1]), p=action_probs.ravel())  # select action w.r.t the actions prob
+        print('Player action: ',a)
+        probs = self.sess.run(self.action_layer, {self.s: s[np.newaxis,:], self.a_player: a})   # get probabilities for all actions
+        action = np.argmax(probs)
+        print('Policing action: ', action)
         return action
 
-    def calc_action_probs(self, s, a):
-        print('Player action: ',a)
-        s = s[np.newaxis,:]
-        probs = self.sess.run(self.actions_prob, {self.s: s, self.a_player: a})   # get probabilities for all actions
-        #probs = np.array([[1,0]]) if a == 0 else np.array([[0,1]])
-        print('Policing probabilities: ', probs)
-        return probs
+    # def calc_action_probs(self, s, a):
+    #     print('Player action: ',a)
+    #     s = s[np.newaxis,:]
+    #     probs = self.sess.run(self.actions_prob, {self.s: s, self.a_player: a})   # get probabilities for all actions
+    #     #probs = np.array([[1,0]]) if a == 0 else np.array([[0,1]])
+    #     return probs
