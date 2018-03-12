@@ -28,14 +28,13 @@ def run_game(N_EPISODES, players, policing_agent = None):
             s_, rewards, done = env.step(actions)
 
             if policing_agent is not None:
-                assert(len(players) == 2) #temporary
-                policing_action = policing_agent.choose_action(s,actions[0])
-                policing_rs = [4 * (policing_action-1), 0]
+                a_p_list = policing_agent.choose_action(s,actions)
+                policing_rs = [4 * (a_p-1) for a_p in a_p_list]
                 rewards = [ sum(r) for r in zip(rewards,policing_rs)]
                 print('Rewards: ', rewards)
                 cum_policing_rs = [sum(r) for r in zip(cum_policing_rs, policing_rs)]
                 # Training policing agent
-                policing_agent.learn(s,actions[0])
+                policing_agent.learn(s,actions)
             # print('Actions:',actions)
             # print('State after:',s_)
             # print('Rewards:',rewards)
@@ -107,7 +106,7 @@ if __name__ == "__main__":
 
     env = Prisoners_Dilemma()    
     agents = create_population(env,2)
-    policing_agent = Policing_Agent(env,agents[0])
+    policing_agent = Policing_Agent(env,agents)
 
     avg_rewards_per_round,avg_policing_rewards_per_round = run_game(N_EPISODES,agents,policing_agent)
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__(), exp_factor=0.1)

@@ -1,8 +1,8 @@
 import numpy as np
 import tensorflow as tf
 
-np.random.seed(4)
-tf.set_random_seed(4)
+np.random.seed(2)
+tf.set_random_seed(2)
 
 from enum import Enum, auto
 class Critic_Variant(Enum):
@@ -173,18 +173,31 @@ class Critic(object):
         return td_error
 
 class Policing_Agent(Agent):
+    def __init__(self, env, policed_agents, learning_rate=0.01, n_units = 4, gamma = 0.95):
+        super().__init__(env, learning_rate, gamma)     
+        self.policing_subagents = []
+        for policed_agent in policed_agents:
+            self.policing_subagents.append(Policing_Sub_Agent(env,policed_agent,learning_rate,n_units,gamma))
+
+    def learn(self, s, a_players):
+        for (a,policing_subagent) in zip(a_players,self.policing_subagents):
+            policing_subagent.learn(s,a)
+
+    def choose_action(self, s, player_actions):
+        return [policing_subagent.choose_action(s,a) for (a,policing_subagent) in zip(player_actions,self.policing_subagents)]
+
+class Policing_Sub_Agent(Agent):
     def __init__(self, env, policed_agent, learning_rate=0.01, n_units = 4, gamma = 0.95):
         super().__init__(env, learning_rate, gamma)
         self.n_policing_actions = 2
         self.n_features = env.n_features + env.n_actions * env.n_players
+        self.policed_agent = policed_agent
 
-        self.s = tf.placeholder(tf.float32, [1, env.n_features], "state")
-        #self.pi1_action_probs = tf.placeholder(tf.float32, [1, env.n_actions], "player1_action_probs")
-        #self.a = tf.placeholder(tf.int32, None, "policing_action")
-        self.a_player = tf.placeholder(tf.float32, None, "player1_action")
+        self.s = tf.placeholder(tf.float32, [1, env.n_features], "state")   
+        self.a_player = tf.placeholder(tf.float32, None, "player_action")
         self.inputs = tf.concat([self.s,tf.reshape(self.a_player,(1,1))],1)
 
-        with tf.variable_scope('Policy_p_Network'):
+        with tf.variable_scope('Policy_p_Network_Agent_'+str(policed_agent.agent_idx)):
             # l1 = tf.layers.dense(
             #     inputs=self.inputs,
             #     units=n_units,    # number of hidden units
@@ -205,7 +218,8 @@ class Policing_Agent(Agent):
 
         with tf.variable_scope('Vp'):
             # Vp is trivial to calculate in this special case
-            self.vp = 4 * (tf.argmax(self.action_layer,axis=1)-1)
+            self.vp = -2 * (1 + tf.sign(self.action_layer[0,0]-self.action_layer[0,1]))
+            #4 * (tf.argmax(self.action_layer,axis=1)-1)
             #self.v2p = -self.vp
 
         with tf.variable_scope('V_total'):
@@ -234,7 +248,7 @@ class Policing_Agent(Agent):
     def learn(self, s, a_player):
         #player_action_probs = self.agent_list[0].calc_action_probs(s)
         s = s[np.newaxis,:]
-        feed_dict = {self.s: s, self.a_player: a_player, self.agent_list[0].actor.s: s}
+        feed_dict = {self.s: s, self.a_player: a_player, self.policed_agent.actor.s: s}
         self.sess.run([self.train_op], feed_dict)
         #feed_dict = {self.a_player: a_player}
         #print(self.sess.run([self.v], feed_dict))
