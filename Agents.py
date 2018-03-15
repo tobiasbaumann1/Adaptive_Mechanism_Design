@@ -33,6 +33,9 @@ class Agent(object):
     def learn_at_episode_end(self):
         pass
 
+    def get_actions_prob_log(self):
+        return self.log
+
     def close(self):
         self.sess.close()
         tf.reset_default_graph()
