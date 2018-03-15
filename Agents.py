@@ -185,7 +185,7 @@ class Simple_Agent(Agent): #plays games with 2 actions, using a single parameter
 
         with tf.variable_scope('Actor'):
             self.theta = tf.Variable(tf.random_uniform([1],minval=0,maxval=1))  # theta represents probability to play action 1 (cooperate)
-            self.actions_prob = tf.expand_dims(tf.concat([1-self.theta,self.theta],0),0)
+            self.actions_prob = tf.expand_dims(tf.concat([1-tf.sigmoid(self.theta),tf.sigmoid(self.theta)],0),0)
 
         with tf.variable_scope('exp_v'):
             log_prob = tf.log(self.actions_prob[0,self.a])
