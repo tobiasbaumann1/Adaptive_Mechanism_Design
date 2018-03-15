@@ -1,10 +1,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import logging
+logging.basicConfig(filename='main.log',level=logging.DEBUG)
 from statistics import mean
 from Environments import Prisoners_Dilemma
-from Agents import Actor_Critic_Agent, Critic_Variant, Policing_Agent, Simple_Agent
+from Agents import Actor_Critic_Agent, Critic_Variant, Simple_Agent
+from Policing_Agent import Policing_Agent
+
 HISTORY_LENGTH = 5 # the NN will use the actions from this many past rounds to determine its action
-N_EPISODES = 3000
+N_EPISODES = 1000
 N_PLAYERS = 2
 N_UNITS = 1 #number of nodes in the intermediate layer of the NN
 
@@ -34,14 +38,13 @@ def run_game(N_EPISODES, players, policing_agent = None):
                 mean_policing_r = mean(policing_rs)
                 policing_rs = [r-mean_policing_r for r in policing_rs]
                 rewards = [ sum(r) for r in zip(rewards,policing_rs)]
-                print('Rewards: ', rewards)
                 cum_policing_rs = [sum(r) for r in zip(cum_policing_rs, policing_rs)]
                 # Training policing agent
                 policing_agent.learn(s,actions)
-            # print('Actions:',actions)
-            # print('State after:',s_)
-            # print('Rewards:',rewards)
-            # print('Done:',done)
+            logging.info('Actions:' + str(actions))
+            logging.info('State after:' + str(s_))
+            logging.info('Rewards: ' + str(rewards))
+            logging.info('Done:' + str(done))
 
             for idx, player in enumerate(players):
                 if flag:
@@ -61,7 +64,7 @@ def run_game(N_EPISODES, players, policing_agent = None):
         avg_policing_rewards_per_round.append([r / env.step_ctr for r in cum_policing_rs])
 
         # status updates
-        if (episode+1) % 10 == 0:
+        if (episode+1) % 100 == 0:
             print('Episode {} finished.'.format(episode + 1))
     return env.get_avg_rewards_per_round(), np.asarray(avg_policing_rewards_per_round)
 
