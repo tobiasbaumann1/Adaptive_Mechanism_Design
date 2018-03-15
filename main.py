@@ -124,5 +124,5 @@ if __name__ == "__main__":
     avg_rewards_per_round,avg_policing_rewards_per_round = run_game(N_EPISODES,agents,policing_agent)
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__(), exp_factor=0.1)
     plot_results(avg_policing_rewards_per_round,[str(agent) for agent in agents],env.__str__()+'_policing_rewards', exp_factor=0.1)
-    action_prob_each_round_list = np.transpose(np.array([agent.log for agent in agents]))
-    plot_results(action_prob_each_round_list,[str(agent) for agent in agents],env.__str__()+'_player_action_probabilities', ylabel = 'P(Cooperation)')
+    actor_a_prob_each_round_list = np.transpose(np.array([agent.log for agent in agents]))
+    plot_results(actor_a_prob_each_round_list,[str(agent) for agent in agents],env.__str__()+'_player_action_probabilities', ylabel = 'P(Cooperation)')

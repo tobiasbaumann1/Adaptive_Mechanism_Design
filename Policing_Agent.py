@@ -39,7 +39,7 @@ class Policing_Sub_Agent(Agent):
             #     name='l1_policing'
             # )
 
-            self.actions_prob = tf.layers.dense(
+            self.action_probs = tf.layers.dense(
                 inputs=self.inputs,
                 units=self.n_policing_actions,    # output units
                 activation=tf.nn.softmax,
@@ -50,7 +50,7 @@ class Policing_Sub_Agent(Agent):
 
         with tf.variable_scope('Vp'):
             # Vp is trivial to calculate in this special case
-            self.vp = 3 * (self.actions_prob[0,1]-self.actions_prob[0,0])
+            self.vp = 3 * (self.action_probs[0,1]-self.action_probs[0,0])
 
         with tf.variable_scope('V_total'):
             # V is trivial to calculate in this special case
@@ -79,8 +79,8 @@ class Policing_Sub_Agent(Agent):
         s = s[np.newaxis,:]
         feed_dict = {self.s: s, self.a_player: a_player, self.policed_agent.get_state_variable(): s}
         self.sess.run([self.train_op], feed_dict)
-        actions_prob,vp,v,cost,g_Vp_d,g_V_d = self.sess.run([self.actions_prob,self.vp,self.v,self.cost,self.g_Vp_d,self.g_V_d], feed_dict)
-        logging.info('Policing_actions_prob: ' + str(actions_prob))
+        action_probs,vp,v,cost,g_Vp_d,g_V_d = self.sess.run([self.action_probs,self.vp,self.v,self.cost,self.g_Vp_d,self.g_V_d], feed_dict)
+        logging.info('Policing_action_probs: ' + str(action_probs))
         logging.info('Vp: ' + str(vp))
         logging.info('V: ' + str(v))
         logging.info('Gradient of V_p: ' + str(g_Vp_d))
@@ -96,5 +96,5 @@ class Policing_Sub_Agent(Agent):
 
     def calc_action_probs(self, s, a):
         s = s[np.newaxis, :]
-        probs = self.sess.run(self.actions_prob, {self.s: s, self.a_player: a})   # get probabilities for all actions
+        probs = self.sess.run(self.action_probs, {self.s: s, self.a_player: a})   # get probabilities for all actions
         return probs

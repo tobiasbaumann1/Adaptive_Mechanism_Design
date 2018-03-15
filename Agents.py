@@ -22,16 +22,15 @@ class Agent(object):
         self.learning_rate = learning_rate
         self.gamma = gamma
         self.agent_idx = agent_idx
+        self.log = [] # logs action probabilities
 
     def choose_action(self, s):
         action_probs = self.calc_action_probs(s)
         action = np.random.choice(range(action_probs.shape[1]), p=action_probs.ravel())  # select action w.r.t the actions prob
+        self.log.append(action_probs[0,1])
         return action
 
     def learn_at_episode_end(self):
-        pass
-
-    def pass_agent_list(self, agent_list):
         pass
 
     def close(self):
@@ -181,7 +180,6 @@ class Critic(object):
 class Simple_Agent(Agent): #plays games with 2 actions, using a single parameter
     def __init__(self, env, learning_rate=0.001, n_units_critic = 20, gamma = 0.95, agent_idx = 0, critic_variant = Critic_Variant.INDEPENDENT):
         super().__init__(env, learning_rate, gamma, agent_idx)
-        self.log = []
         self.s = tf.placeholder(tf.float32, [1, env.n_features], "state") # dummy variable
         self.a = tf.placeholder(tf.int32, None, "act")
         self.td_error = tf.placeholder(tf.float32, None, "td_error")  # TD_error
@@ -211,12 +209,6 @@ class Simple_Agent(Agent): #plays games with 2 actions, using a single parameter
 
     def __str__(self):
         return 'Simple_Agent_'+str(self.agent_idx)
-
-    def choose_action(self, s):
-        action_probs = self.calc_action_probs(s)
-        action = np.random.choice(range(action_probs.shape[1]), p=action_probs.ravel())  # select action w.r.t the actions prob
-        self.log.append(action_probs[0,1])
-        return action
 
     def calc_action_probs(self, s):
         s = s[np.newaxis, :]
