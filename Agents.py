@@ -271,13 +271,11 @@ class Policing_Sub_Agent(Agent):
 
         with tf.variable_scope('Vp'):
             # Vp is trivial to calculate in this special case
-            self.vp = -2 * (1 + tf.sign(self.action_layer[0,0]-self.action_layer[0,1]))
-            #4 * (tf.argmax(self.action_layer,axis=1)-1)
-            #self.v2p = -self.vp
+            self.vp = -4 * (1 + tf.sign(self.action_layer[0,0]-self.action_layer[0,1]))
 
         with tf.variable_scope('V_total'):
             # V is trivial to calculate in this special case
-            self.v = -4 * (self.a_player - 0.5)
+            self.v = 4 * (self.a_player - 0.5) # omit contribution of second player because derivative vanishes
 
         with tf.variable_scope('cost_function'):
             # Gradients w.r.t. theta_1
@@ -287,20 +285,25 @@ class Policing_Sub_Agent(Agent):
             g_log_prob = tf.concat([tf.reshape(param,[-1]) for param in g_log_prob],0)
 
             # policy gradient theorem
-            g_Vp_d = g_log_prob * self.vp
-            g_V_d = g_log_prob * self.v
+            self.g_Vp_d = g_log_prob * self.vp
+            self.g_V_d = g_log_prob * self.v
 
-            cost = - policed_agent.learning_rate * tf.tensordot(g_Vp_d,g_V_d,1)
+            self.cost = - policed_agent.learning_rate * tf.tensordot(self.g_Vp_d,self.g_V_d,1)
 
         with tf.variable_scope('trainPolicingAgent'):
-            self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(cost)  #STOP GRADIENT
+            self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(self.cost)  
 
         self.sess.run(tf.global_variables_initializer())
 
     def learn(self, s, a_player):
         s = s[np.newaxis,:]
         feed_dict = {self.s: s, self.a_player: a_player, self.policed_agent.get_state_variable(): s}
-        self.sess.run([self.train_op], feed_dict)
+        vp,v,cost,g_Vp_d,g_V_d,_ = self.sess.run([self.vp,self.v,self.cost,self.g_Vp_d,self.g_V_d,self.train_op], feed_dict)
+        print('Vp: ', vp)
+        print('V: ', v)
+        print('Gradient of V_p: ', g_Vp_d)
+        print('Gradient of V: ', g_V_d)
+        print('Cost: ', cost)
 
     def choose_action(self, s, a):
         print('Player action: ',a)
