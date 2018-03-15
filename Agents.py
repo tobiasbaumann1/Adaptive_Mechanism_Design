@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 
-RANDOM_SEED = 9
+RANDOM_SEED = 5
 np.random.seed(RANDOM_SEED)
 tf.set_random_seed(RANDOM_SEED)
 
@@ -179,6 +179,7 @@ class Critic(object):
 class Simple_Agent(Agent): #plays games with 2 actions, using a single parameter
     def __init__(self, env, learning_rate=0.001, n_units_critic = 20, gamma = 0.95, agent_idx = 0, critic_variant = Critic_Variant.INDEPENDENT):
         super().__init__(env, learning_rate, gamma, agent_idx)
+        self.log = []
         self.s = tf.placeholder(tf.float32, [1, env.n_features], "state") # dummy variable
         self.a = tf.placeholder(tf.int32, None, "act")
         self.td_error = tf.placeholder(tf.float32, None, "td_error")  # TD_error
@@ -211,7 +212,9 @@ class Simple_Agent(Agent): #plays games with 2 actions, using a single parameter
 
     def calc_action_probs(self, s):
         s = s[np.newaxis, :]
-        return self.sess.run(self.actions_prob)  
+        probs = self.sess.run(self.actions_prob)  
+        self.log.append(probs[0,1])
+        return probs
 
     def pass_agent_list(self, agent_list):
         self.critic.pass_agent_list(agent_list)
@@ -250,7 +253,7 @@ class Policing_Sub_Agent(Agent):
         self.a_player = tf.placeholder(tf.float32, None, "player_action")
         self.inputs = tf.concat([self.s,tf.reshape(self.a_player,(1,1))],1)
 
-        with tf.variable_scope('Policy_p_Network_Agent_'+str(policed_agent.agent_idx)):
+        with tf.variable_scope('Policy_p_'+str(policed_agent.agent_idx)):
             # l1 = tf.layers.dense(
             #     inputs=self.inputs,
             #     units=n_units,    # number of hidden units
@@ -260,10 +263,10 @@ class Policing_Sub_Agent(Agent):
             #     name='l1_policing'
             # )
 
-            self.action_layer = tf.layers.dense(
+            self.actions_prob = tf.layers.dense(
                 inputs=self.inputs,
                 units=self.n_policing_actions,    # output units
-                activation=None,
+                activation=tf.nn.softmax,
                 kernel_initializer=tf.random_normal_initializer(0., .1),  # weights
                 bias_initializer=tf.constant_initializer(0),  # biases
                 name='actions_policing'
@@ -271,7 +274,7 @@ class Policing_Sub_Agent(Agent):
 
         with tf.variable_scope('Vp'):
             # Vp is trivial to calculate in this special case
-            self.vp = -4 * (1 + tf.sign(self.action_layer[0,0]-self.action_layer[0,1]))
+            self.vp = 4 * (self.actions_prob[0,1]-self.actions_prob[0,0])
 
         with tf.variable_scope('V_total'):
             # V is trivial to calculate in this special case
@@ -291,14 +294,17 @@ class Policing_Sub_Agent(Agent):
             self.cost = - policed_agent.learning_rate * tf.tensordot(self.g_Vp_d,self.g_V_d,1)
 
         with tf.variable_scope('trainPolicingAgent'):
-            self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(self.cost)  
+            self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(self.cost, 
+                var_list = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='Policy_p_'+str(policed_agent.agent_idx)))  
 
         self.sess.run(tf.global_variables_initializer())
 
     def learn(self, s, a_player):
         s = s[np.newaxis,:]
         feed_dict = {self.s: s, self.a_player: a_player, self.policed_agent.get_state_variable(): s}
-        vp,v,cost,g_Vp_d,g_V_d,_ = self.sess.run([self.vp,self.v,self.cost,self.g_Vp_d,self.g_V_d,self.train_op], feed_dict)
+        self.sess.run([self.train_op], feed_dict)
+        actions_prob,vp,v,cost,g_Vp_d,g_V_d = self.sess.run([self.actions_prob,self.vp,self.v,self.cost,self.g_Vp_d,self.g_V_d], feed_dict)
+        print('Policing_actions_prob: ', actions_prob)
         print('Vp: ', vp)
         print('V: ', v)
         print('Gradient of V_p: ', g_Vp_d)
@@ -306,8 +312,13 @@ class Policing_Sub_Agent(Agent):
         print('Cost: ', cost)
 
     def choose_action(self, s, a):
+        action_probs = self.calc_action_probs(s,a)
         print('Player action: ',a)
-        probs = self.sess.run(self.action_layer, {self.s: s[np.newaxis,:], self.a_player: a})   # get probabilities for all actions
-        action = np.argmax(probs)
+        action = np.random.choice(range(action_probs.shape[1]), p=action_probs.ravel())  # select action w.r.t the actions prob
         print('Policing action: ', action)
         return action
+
+    def calc_action_probs(self, s, a):
+        s = s[np.newaxis, :]
+        probs = self.sess.run(self.actions_prob, {self.s: s, self.a_player: a})   # get probabilities for all actions
+        return probs

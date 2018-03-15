@@ -1,9 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from statistics import mean
 from Environments import Prisoners_Dilemma
 from Agents import Actor_Critic_Agent, Critic_Variant, Policing_Agent, Simple_Agent
 HISTORY_LENGTH = 5 # the NN will use the actions from this many past rounds to determine its action
-N_EPISODES = 1000
+N_EPISODES = 2000
 N_PLAYERS = 4
 N_UNITS = 1 #number of nodes in the intermediate layer of the NN
 
@@ -29,7 +30,9 @@ def run_game(N_EPISODES, players, policing_agent = None):
 
             if policing_agent is not None:
                 a_p_list = policing_agent.choose_action(s,actions)
-                policing_rs = [4 * (a_p-1) for a_p in a_p_list]
+                policing_rs = [4 * (a_p-0.5) for a_p in a_p_list]
+                mean_policing_r = mean(policing_rs)
+                policing_rs = [r-mean_policing_r for r in policing_rs]
                 rewards = [ sum(r) for r in zip(rewards,policing_rs)]
                 print('Rewards: ', rewards)
                 cum_policing_rs = [sum(r) for r in zip(cum_policing_rs, policing_rs)]
@@ -62,7 +65,7 @@ def run_game(N_EPISODES, players, policing_agent = None):
             print('Episode {} finished.'.format(episode + 1))
     return env.get_avg_rewards_per_round(), np.asarray(avg_policing_rewards_per_round)
 
-def plot_results(avg_rewards_per_round, legend, label, exp_factor = 1):
+def plot_results(avg_rewards_per_round, legend, title, ylabel = 'Reward', exp_factor = 1):
     plt.figure()
     for agent_idx in range(avg_rewards_per_round.shape[1]):
         avg = avg_rewards_per_round[0,agent_idx]
@@ -73,10 +76,10 @@ def plot_results(avg_rewards_per_round, legend, label, exp_factor = 1):
         first_idx = int(1 / exp_factor)
         plt.plot(range(first_idx,len(avg_list)),avg_list[first_idx:])
     plt.xlabel('Episode')
-    plt.ylabel('Reward')
+    plt.ylabel(ylabel)
     plt.legend(legend)
-    plt.title(label)
-    plt.savefig('./'+label)
+    plt.title(title)
+    plt.savefig('./'+title)
     #plt.show()
 
 def create_population(env,n_agents, use_simple_agents = False):    
@@ -118,3 +121,5 @@ if __name__ == "__main__":
     avg_rewards_per_round,avg_policing_rewards_per_round = run_game(N_EPISODES,agents,policing_agent)
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__(), exp_factor=0.1)
     plot_results(avg_policing_rewards_per_round,[str(agent) for agent in agents],env.__str__()+'_policing_rewards', exp_factor=0.1)
+    action_prob_each_round_list = np.array([agent.log for agent in agents])
+    plot_results(action_prob_each_round_list,[str(agent) for agent in agents],env.__str__()+'action_probabilities')
