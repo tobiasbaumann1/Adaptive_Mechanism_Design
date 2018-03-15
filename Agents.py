@@ -69,6 +69,9 @@ class Actor_Critic_Agent(Agent):
     def get_action_prob_variable(self):
         return self.actor.actions_prob
 
+    def get_state_variable(self):
+        return self.actor.s
+
     def get_policy_parameters(self):
         return [self.actor.w_l1,self.actor.b_l1,self.actor.w_pi1,self.actor.b_pi1]
 
@@ -173,6 +176,55 @@ class Critic(object):
                                           {self.nn_inputs: nn_inputs, self.v_: v_, self.r: r})
         return td_error
 
+class Simple_Agent(Agent): #plays games with 2 actions, using a single parameter
+    def __init__(self, env, learning_rate=0.001, n_units_critic = 20, gamma = 0.95, agent_idx = 0, critic_variant = Critic_Variant.INDEPENDENT):
+        super().__init__(env, learning_rate, gamma, agent_idx)
+        self.s = tf.placeholder(tf.float32, [1, env.n_features], "state") # dummy variable
+        self.a = tf.placeholder(tf.int32, None, "act")
+        self.td_error = tf.placeholder(tf.float32, None, "td_error")  # TD_error
+
+        with tf.variable_scope('Actor'):
+            self.theta = tf.Variable(tf.random_uniform([1],minval=0,maxval=1))  # theta represents probability to play action 1 (cooperate)
+            self.actions_prob = tf.expand_dims(tf.concat([1-self.theta,self.theta],0),0)
+
+        with tf.variable_scope('exp_v'):
+            log_prob = tf.log(self.actions_prob[0,self.a])
+            self.exp_v = tf.reduce_mean(log_prob * self.td_error)  
+
+        with tf.variable_scope('trainActor'):
+            self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(-self.exp_v) 
+
+        self.critic = Critic(env, n_units_critic, learning_rate, gamma, agent_idx, critic_variant)
+
+        self.sess.run(tf.global_variables_initializer())
+
+    def learn(self, s, a, r, s_, done = False, *args):
+        if done:
+            pass
+        else:
+            td = self.critic.learn(self.sess,s,r,s_, *args)
+            feed_dict = {self.a: a, self.td_error: td}
+            _, exp_v = self.sess.run([self.train_op, self.exp_v], feed_dict)
+
+    def __str__(self):
+        return 'Simple_Agent_'+str(self.agent_idx)
+
+    def calc_action_probs(self, s):
+        s = s[np.newaxis, :]
+        return self.sess.run(self.actions_prob)  
+
+    def pass_agent_list(self, agent_list):
+        self.critic.pass_agent_list(agent_list)
+
+    def get_action_prob_variable(self):
+        return self.actions_prob
+
+    def get_state_variable(self):
+        return self.s
+
+    def get_policy_parameters(self):
+        return [self.theta]
+
 class Policing_Agent(Agent):
     def __init__(self, env, policed_agents, learning_rate=0.01, n_units = 4, gamma = 0.95):
         super().__init__(env, learning_rate, gamma)     
@@ -247,7 +299,7 @@ class Policing_Sub_Agent(Agent):
 
     def learn(self, s, a_player):
         s = s[np.newaxis,:]
-        feed_dict = {self.s: s, self.a_player: a_player, self.policed_agent.actor.s: s}
+        feed_dict = {self.s: s, self.a_player: a_player, self.policed_agent.get_state_variable(): s}
         self.sess.run([self.train_op], feed_dict)
 
     def choose_action(self, s, a):

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from Environments import Prisoners_Dilemma
-from Agents import Actor_Critic_Agent, Critic_Variant, Policing_Agent
+from Agents import Actor_Critic_Agent, Critic_Variant, Policing_Agent, Simple_Agent
 HISTORY_LENGTH = 5 # the NN will use the actions from this many past rounds to determine its action
 N_EPISODES = 1000
 N_PLAYERS = 4
@@ -79,14 +79,21 @@ def plot_results(avg_rewards_per_round, legend, label, exp_factor = 1):
     plt.savefig('./'+label)
     #plt.show()
 
-def create_population(env,n_actor_critic_agents):    
+def create_population(env,n_agents, use_simple_agents = False):    
     critic_variant = Critic_Variant.CENTRALIZED
-    l = [Actor_Critic_Agent(env, 
-                  learning_rate=0.005,
-                  gamma=0.9,
-                  n_units_actor = N_UNITS,
-                  agent_idx = i,
-                  critic_variant = critic_variant) for i in range(n_actor_critic_agents)]
+    if use_simple_agents:
+        l = [Simple_Agent(env, 
+                      learning_rate=0.005,
+                      gamma=0.9,
+                      agent_idx = i,
+                      critic_variant = critic_variant) for i in range(n_agents)]
+    else:
+        l = [Actor_Critic_Agent(env, 
+                      learning_rate=0.005,
+                      gamma=0.9,
+                      n_units_actor = N_UNITS,
+                      agent_idx = i,
+                      critic_variant = critic_variant) for i in range(n_agents)]
     #Pass list of agents for centralized critic
     if critic_variant is Critic_Variant.CENTRALIZED:
         for agent in l:
@@ -105,7 +112,7 @@ if __name__ == "__main__":
     #     agent.close()
 
     env = Prisoners_Dilemma()    
-    agents = create_population(env,2)
+    agents = create_population(env,2, use_simple_agents = True)
     policing_agent = Policing_Agent(env,agents)
 
     avg_rewards_per_round,avg_policing_rewards_per_round = run_game(N_EPISODES,agents,policing_agent)
