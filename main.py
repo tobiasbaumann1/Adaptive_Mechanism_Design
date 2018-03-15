@@ -4,8 +4,8 @@ from statistics import mean
 from Environments import Prisoners_Dilemma
 from Agents import Actor_Critic_Agent, Critic_Variant, Policing_Agent, Simple_Agent
 HISTORY_LENGTH = 5 # the NN will use the actions from this many past rounds to determine its action
-N_EPISODES = 2000
-N_PLAYERS = 4
+N_EPISODES = 3000
+N_PLAYERS = 2
 N_UNITS = 1 #number of nodes in the intermediate layer of the NN
 
 def run_game(N_EPISODES, players, policing_agent = None):
@@ -30,7 +30,7 @@ def run_game(N_EPISODES, players, policing_agent = None):
 
             if policing_agent is not None:
                 a_p_list = policing_agent.choose_action(s,actions)
-                policing_rs = [4 * (a_p-0.5) for a_p in a_p_list]
+                policing_rs = [6 * (a_p-0.5) for a_p in a_p_list]
                 mean_policing_r = mean(policing_rs)
                 policing_rs = [r-mean_policing_r for r in policing_rs]
                 rewards = [ sum(r) for r in zip(rewards,policing_rs)]
@@ -86,13 +86,13 @@ def create_population(env,n_agents, use_simple_agents = False):
     critic_variant = Critic_Variant.CENTRALIZED
     if use_simple_agents:
         l = [Simple_Agent(env, 
-                      learning_rate=0.005,
+                      learning_rate=0.01,
                       gamma=0.9,
                       agent_idx = i,
                       critic_variant = critic_variant) for i in range(n_agents)]
     else:
         l = [Actor_Critic_Agent(env, 
-                      learning_rate=0.005,
+                      learning_rate=0.01,
                       gamma=0.9,
                       n_units_actor = N_UNITS,
                       agent_idx = i,
@@ -115,11 +115,11 @@ if __name__ == "__main__":
     #     agent.close()
 
     env = Prisoners_Dilemma()    
-    agents = create_population(env,2, use_simple_agents = True)
+    agents = create_population(env,N_PLAYERS, use_simple_agents = True)
     policing_agent = Policing_Agent(env,agents)
 
     avg_rewards_per_round,avg_policing_rewards_per_round = run_game(N_EPISODES,agents,policing_agent)
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__(), exp_factor=0.1)
     plot_results(avg_policing_rewards_per_round,[str(agent) for agent in agents],env.__str__()+'_policing_rewards', exp_factor=0.1)
-    action_prob_each_round_list = np.array([agent.log for agent in agents])
-    plot_results(action_prob_each_round_list,[str(agent) for agent in agents],env.__str__()+'action_probabilities')
+    action_prob_each_round_list = np.transpose(np.array([agent.log for agent in agents]))
+    plot_results(action_prob_each_round_list,[str(agent) for agent in agents],env.__str__()+'_player_action_probabilities', ylabel = 'P(Cooperation)')

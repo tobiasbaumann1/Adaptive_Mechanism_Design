@@ -210,10 +210,15 @@ class Simple_Agent(Agent): #plays games with 2 actions, using a single parameter
     def __str__(self):
         return 'Simple_Agent_'+str(self.agent_idx)
 
+    def choose_action(self, s):
+        action_probs = self.calc_action_probs(s)
+        action = np.random.choice(range(action_probs.shape[1]), p=action_probs.ravel())  # select action w.r.t the actions prob
+        self.log.append(action_probs[0,1])
+        return action
+
     def calc_action_probs(self, s):
         s = s[np.newaxis, :]
         probs = self.sess.run(self.actions_prob)  
-        self.log.append(probs[0,1])
         return probs
 
     def pass_agent_list(self, agent_list):
@@ -274,7 +279,7 @@ class Policing_Sub_Agent(Agent):
 
         with tf.variable_scope('Vp'):
             # Vp is trivial to calculate in this special case
-            self.vp = 4 * (self.actions_prob[0,1]-self.actions_prob[0,0])
+            self.vp = 3 * (self.actions_prob[0,1]-self.actions_prob[0,0])
 
         with tf.variable_scope('V_total'):
             # V is trivial to calculate in this special case
