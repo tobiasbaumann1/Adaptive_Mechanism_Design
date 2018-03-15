@@ -1,8 +1,9 @@
 import numpy as np
 import tensorflow as tf
 
-np.random.seed(2)
-tf.set_random_seed(2)
+RANDOM_SEED = 9
+np.random.seed(RANDOM_SEED)
+tf.set_random_seed(RANDOM_SEED)
 
 from enum import Enum, auto
 class Critic_Variant(Enum):
@@ -230,7 +231,6 @@ class Policing_Sub_Agent(Agent):
             # Gradients w.r.t. theta_1
             log_prob_pi = tf.log(policed_agent.get_action_prob_variable()[0,tf.cast(self.a_player,dtype = tf.int32)])
             theta = policed_agent.get_policy_parameters()
-            #theta_1 = tf.concat([tf.reshape(param,[-1]) for param in theta_1],0)
             g_log_prob = [tf.gradients(log_prob_pi,param) for param in theta]
             g_log_prob = tf.concat([tf.reshape(param,[-1]) for param in g_log_prob],0)
 
@@ -246,12 +246,9 @@ class Policing_Sub_Agent(Agent):
         self.sess.run(tf.global_variables_initializer())
 
     def learn(self, s, a_player):
-        #player_action_probs = self.agent_list[0].calc_action_probs(s)
         s = s[np.newaxis,:]
         feed_dict = {self.s: s, self.a_player: a_player, self.policed_agent.actor.s: s}
         self.sess.run([self.train_op], feed_dict)
-        #feed_dict = {self.a_player: a_player}
-        #print(self.sess.run([self.v], feed_dict))
 
     def choose_action(self, s, a):
         print('Player action: ',a)
@@ -259,10 +256,3 @@ class Policing_Sub_Agent(Agent):
         action = np.argmax(probs)
         print('Policing action: ', action)
         return action
-
-    # def calc_action_probs(self, s, a):
-    #     print('Player action: ',a)
-    #     s = s[np.newaxis,:]
-    #     probs = self.sess.run(self.actions_prob, {self.s: s, self.a_player: a})   # get probabilities for all actions
-    #     #probs = np.array([[1,0]]) if a == 0 else np.array([[0,1]])
-    #     return probs
