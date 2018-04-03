@@ -10,11 +10,13 @@ class Policing_Agent(Agent):
         self.policing_subagents = []
         for policed_agent in policed_agents:
             self.policing_subagents.append(Policing_Sub_Agent(env,policed_agent,learning_rate,n_units,gamma))
-        self.log = [] # logs action probabilities
 
     def learn(self, s, a_players):
         for (a,policing_subagent) in zip(a_players,self.policing_subagents):
             policing_subagent.learn(s,a)
+
+    def get_log(self):
+        return [subagent.log for subagent in self.policing_subagents]
 
     def choose_action(self, s, player_actions):
         return [policing_subagent.choose_action(s,a) for (a,policing_subagent) in zip(player_actions,self.policing_subagents)]
@@ -25,6 +27,7 @@ class Policing_Sub_Agent(Agent):
         self.n_policing_actions = 2
         self.n_features = env.n_features + env.n_actions * env.n_players
         self.policed_agent = policed_agent
+        self.log = [] # logs action probabilities
 
         self.s = tf.placeholder(tf.float32, [1, env.n_features], "state")   
         self.a_player = tf.placeholder(tf.float32, None, "player_action")
@@ -95,9 +98,9 @@ class Policing_Sub_Agent(Agent):
         logging.info('Policing action: ' + str(action))
         # Policing action probs in the PD case
         if a == 0:
-            self.log.append([action_probs[0], self.calc_action_probs(s,1)[0]])
+            self.log.append([action_probs[0,1], self.calc_action_probs(s,1)[0,1]])
         else:
-            self.log.append([self.calc_action_probs(s,0)[0],action_probs[0]])
+            self.log.append([self.calc_action_probs(s,0)[0,1],action_probs[0,1]])
         return action
 
     def calc_action_probs(self, s, a):
