@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import logging
 logging.basicConfig(filename='main.log',level=logging.DEBUG)
-from statistics import mean
 from Environments import Prisoners_Dilemma
 from Agents import Actor_Critic_Agent, Critic_Variant, Simple_Agent
 from Policing_Agent import Policing_Agent
@@ -11,8 +10,9 @@ HISTORY_LENGTH = 5 # the NN will use the actions from this many past rounds to d
 N_EPISODES = 2000
 N_PLAYERS = 2
 N_UNITS = 1 #number of nodes in the intermediate layer of the NN
+#REWARD_STRENGTH = 6
 
-def run_game(N_EPISODES, players, policing_agent = None):
+def run_game(N_EPISODES, players, policing_agent = None, redistribution = True):
     env.reset_ep_ctr()
     avg_policing_rewards_per_round = []
     for episode in range(N_EPISODES):
@@ -33,10 +33,11 @@ def run_game(N_EPISODES, players, policing_agent = None):
             s_, rewards, done = env.step(actions)
 
             if policing_agent is not None:
-                a_p_list = policing_agent.choose_action(s,actions)
-                policing_rs = [6 * (a_p-0.5) for a_p in a_p_list]
-                mean_policing_r = mean(policing_rs)
-                policing_rs = [r-mean_policing_r for r in policing_rs]
+                policing_rs = policing_agent.choose_action(s,actions)
+                if redistribution:
+                    sum_policing_r = sum(policing_rs)
+                    mean_policing_r = sum_policing_r / N_PLAYERS
+                    policing_rs = [r-mean_policing_r for r in policing_rs]
                 rewards = [ sum(r) for r in zip(rewards,policing_rs)]
                 cum_policing_rs = [sum(r) for r in zip(cum_policing_rs, policing_rs)]
                 # Training policing agent
@@ -121,7 +122,7 @@ if __name__ == "__main__":
     agents = create_population(env,N_PLAYERS, use_simple_agents = True)
     policing_agent = Policing_Agent(env,agents)
 
-    avg_rewards_per_round,avg_policing_rewards_per_round = run_game(N_EPISODES,agents,policing_agent)
+    avg_rewards_per_round,avg_policing_rewards_per_round = run_game(N_EPISODES,agents,policing_agent, redistribution = False)
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__(), exp_factor=0.1)
     plot_results(avg_policing_rewards_per_round,[str(agent) for agent in agents],env.__str__()+'_policing_rewards', exp_factor=0.1)
     actor_a_prob_each_round = np.transpose(np.array([agent.log for agent in agents]))
