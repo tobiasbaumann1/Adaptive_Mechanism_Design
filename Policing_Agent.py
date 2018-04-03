@@ -17,11 +17,6 @@ class Policing_Agent(Agent):
             policing_subagent.learn(s,a)
 
     def choose_action(self, s, player_actions):
-        s = s[np.newaxis,:]
-        # TODO
-        self.sess.run(feed_dict = {self.s: s, self.a_player: 0})
-        {self.s: s, self.a_player: 1}
-        self.log.append()
         return [policing_subagent.choose_action(s,a) for (a,policing_subagent) in zip(player_actions,self.policing_subagents)]
 
 class Policing_Sub_Agent(Agent):
@@ -98,6 +93,11 @@ class Policing_Sub_Agent(Agent):
         logging.info('Player action: ' + str(a))
         action = np.random.choice(range(action_probs.shape[1]), p=action_probs.ravel())  # select action w.r.t the actions prob
         logging.info('Policing action: ' + str(action))
+        # Policing action probs in the PD case
+        if a == 0:
+            self.log.append([action_probs[0], self.calc_action_probs(s,1)[0]])
+        else:
+            self.log.append([self.calc_action_probs(s,0)[0],action_probs[0]])
         return action
 
     def calc_action_probs(self, s, a):
