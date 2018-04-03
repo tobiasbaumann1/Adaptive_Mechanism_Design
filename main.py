@@ -8,7 +8,7 @@ from Agents import Actor_Critic_Agent, Critic_Variant, Simple_Agent
 from Policing_Agent import Policing_Agent
 
 HISTORY_LENGTH = 5 # the NN will use the actions from this many past rounds to determine its action
-N_EPISODES = 1000
+N_EPISODES = 2000
 N_PLAYERS = 2
 N_UNITS = 1 #number of nodes in the intermediate layer of the NN
 
@@ -127,5 +127,4 @@ if __name__ == "__main__":
     actor_a_prob_each_round = np.transpose(np.array([agent.log for agent in agents]))
     plot_results(actor_a_prob_each_round,[str(agent) for agent in agents],env.__str__()+'_player_action_probabilities', ylabel = 'P(Cooperation)')
     policing_a_prob_each_round = np.array(policing_agent.get_log()[0])
-    print(policing_a_prob_each_round.shape)
     plot_results(policing_a_prob_each_round,['Agent plays D', 'Agent plays C'],env.__str__()+'_policing_action_probabilities', ylabel = 'P(a_p=1)')
