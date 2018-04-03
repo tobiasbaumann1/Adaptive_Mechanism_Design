@@ -10,18 +10,12 @@ class Policing_Agent(Agent):
         self.policing_subagents = []
         for policed_agent in policed_agents:
             self.policing_subagents.append(Policing_Sub_Agent(env,policed_agent,learning_rate,n_units,gamma))
-        self.log = [] # logs action probabilities
 
     def learn(self, s, a_players):
         for (a,policing_subagent) in zip(a_players,self.policing_subagents):
             policing_subagent.learn(s,a)
 
     def choose_action(self, s, player_actions):
-        s = s[np.newaxis,:]
-        # TODO
-        self.sess.run(feed_dict = {self.s: s, self.a_player: 0})
-        {self.s: s, self.a_player: 1}
-        self.log.append()
         return [policing_subagent.choose_action(s,a) for (a,policing_subagent) in zip(player_actions,self.policing_subagents)]
 
 class Policing_Sub_Agent(Agent):
