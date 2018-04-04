@@ -1,16 +1,15 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import logging
-logging.basicConfig(filename='main.log',level=logging.DEBUG)
+logging.basicConfig(filename='main.log',level=logging.DEBUG,filemode='w')
 from Environments import Prisoners_Dilemma
 from Agents import Actor_Critic_Agent, Critic_Variant, Simple_Agent
 from Policing_Agent import Policing_Agent
 
 HISTORY_LENGTH = 5 # the NN will use the actions from this many past rounds to determine its action
-N_EPISODES = 2000
+N_EPISODES = 1000
 N_PLAYERS = 2
 N_UNITS = 1 #number of nodes in the intermediate layer of the NN
-#REWARD_STRENGTH = 6
 
 def run_game(N_EPISODES, players, policing_agent = None, redistribution = True):
     env.reset_ep_ctr()
@@ -108,24 +107,15 @@ def create_population(env,n_agents, use_simple_agents = False):
     return l
 
 if __name__ == "__main__":
-    # Initialize env and agents
-    #env = Public_Goods_Game(HISTORY_LENGTH,N_PLAYERS, multiplier = 3, punishment_cost = 0.2, punishment_strength = 2)    
-    # env = Prisoners_Dilemma(signal_possible = True, option_to_abstain = True)    
-    # agents = create_population(env,2)
-    
-    # avg_rewards_per_round = 2 * run_game(N_EPISODES,agents)
-    # plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__(), exp_factor=0.1)
-    # for agent in agents:
-    #     agent.close()
 
     env = Prisoners_Dilemma()    
     agents = create_population(env,N_PLAYERS, use_simple_agents = True)
     policing_agent = Policing_Agent(env,agents)
 
-    avg_rewards_per_round,avg_policing_rewards_per_round = run_game(N_EPISODES,agents,policing_agent, redistribution = False)
+    avg_rewards_per_round,avg_policing_rewards_per_round = run_game(N_EPISODES,agents,policing_agent)
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__(), exp_factor=0.1)
     plot_results(avg_policing_rewards_per_round,[str(agent) for agent in agents],env.__str__()+'_policing_rewards', exp_factor=0.1)
     actor_a_prob_each_round = np.transpose(np.array([agent.log for agent in agents]))
     plot_results(actor_a_prob_each_round,[str(agent) for agent in agents],env.__str__()+'_player_action_probabilities', ylabel = 'P(Cooperation)')
     policing_a_prob_each_round = np.array(policing_agent.get_log()[0])
-    plot_results(policing_a_prob_each_round,['Agent plays D', 'Agent plays C'],env.__str__()+'_policing_action_probabilities', ylabel = 'P(a_p=1)')
+    plot_results(policing_a_prob_each_round,['Agent plays D', 'Agent plays C'],env.__str__()+'_policing_action_probabilities', ylabel = 'a_p')

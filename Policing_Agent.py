@@ -1,8 +1,9 @@
 import tensorflow as tf
 import numpy as np
 import logging
-logging.basicConfig(filename='Policing_Agent.log',level=logging.DEBUG)
+logging.basicConfig(filename='Policing_Agent.log',level=logging.DEBUG,filemode='w')
 from Agents import Agent
+MAX_REWARD_STRENGTH = 3
 
 class Policing_Agent(Agent):
     def __init__(self, env, policed_agents, learning_rate=0.01, n_units = 4, gamma = 0.95):
@@ -42,18 +43,20 @@ class Policing_Sub_Agent(Agent):
             #     name='l1_policing'
             # )
 
-            self.action_layer = tf.layers.dense(
+            self.l1 = tf.layers.dense(
                 inputs=self.inputs,
                 units=1,    # output units
                 activation=None,
-                kernel_initializer=tf.random_normal_initializer(0., 1),  # weights
+                kernel_initializer=tf.random_normal_initializer(0, .1),  # weights
                 bias_initializer=tf.constant_initializer(0),  # biases
                 name='actions_policing'
             )
 
+            self.action_layer = tf.sigmoid(self.l1)
+
         with tf.variable_scope('Vp'):
             # Vp is trivial to calculate in this special case
-            self.vp = self.action_layer
+            self.vp = 2 * MAX_REWARD_STRENGTH * (self.action_layer - 0.5)
 
         with tf.variable_scope('V_total'):
             # V is trivial to calculate in this special case
@@ -82,6 +85,7 @@ class Policing_Sub_Agent(Agent):
         feed_dict = {self.s: s, self.a_player: a_player, self.policed_agent.get_state_variable(): s}
         self.sess.run([self.train_op], feed_dict)
         action,vp,v,cost,g_Vp_d,g_V_d = self.sess.run([self.action_layer,self.vp,self.v,self.cost,self.g_Vp_d,self.g_V_d], feed_dict)
+        logging.info('Learning step')
         logging.info('Policing_action: ' + str(action))
         logging.info('Vp: ' + str(vp))
         logging.info('V: ' + str(v))
@@ -96,8 +100,11 @@ class Policing_Sub_Agent(Agent):
         logging.info('Policing action: ' + str(action))
         # Policing action probs in the PD case
         if a == 0:
-            self.log.append([action[0,0], self.sess.run(self.action_layer, {self.s: s, self.a_player: 1})[0,0]])
+            a_p_defect = 2 * MAX_REWARD_STRENGTH * (action[0,0] - 0.5)
+            a_p_coop = 2 * MAX_REWARD_STRENGTH * (self.sess.run(self.action_layer, {self.s: s, self.a_player: 1})[0,0] - 0.5)
         else:
-            self.log.append([self.sess.run(self.action_layer, {self.s: s, self.a_player: 0})[0,0],action[0,0]])
-        return action[0,0]
+            a_p_coop = 2 * MAX_REWARD_STRENGTH * (action[0,0] - 0.5)
+            a_p_defect = 2 * MAX_REWARD_STRENGTH * (self.sess.run(self.action_layer, {self.s: s, self.a_player: 0})[0,0] - 0.5)
+        self.log.append([a_p_defect,a_p_coop])
+        return 2 * MAX_REWARD_STRENGTH * (action[0,0] - 0.5)
 
