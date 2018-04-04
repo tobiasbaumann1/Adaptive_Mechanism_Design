@@ -61,7 +61,6 @@ def run_game(N_EPISODES, players, policing_agent = None, redistribution = True):
                 for player in players:
                     player.learn_at_episode_end() 
                 break
-
         avg_policing_rewards_per_round.append([r / env.step_ctr for r in cum_policing_rs])
 
         # status updates
@@ -111,7 +110,7 @@ if __name__ == "__main__":
 
     env = Prisoners_Dilemma()    
     agents = create_population(env,N_PLAYERS, use_simple_agents = True)
-    policing_agent = Policing_Agent(env,agents,max_reward_strength = 3)
+    policing_agent = Policing_Agent(env,agents,max_reward_strength = None, cost_param = 0.0005)
 
     avg_rewards_per_round,avg_policing_rewards_per_round = run_game(N_EPISODES,agents,policing_agent)
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__(), exp_factor=0.1)

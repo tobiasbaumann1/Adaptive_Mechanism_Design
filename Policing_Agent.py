@@ -9,11 +9,12 @@ np.random.seed(RANDOM_SEED)
 tf.set_random_seed(RANDOM_SEED)
 
 class Policing_Agent(Agent):
-    def __init__(self, env, policed_agents, learning_rate=0.01, n_units = 4, gamma = 0.95, max_reward_strength = None):
+    def __init__(self, env, policed_agents, learning_rate=0.01, n_units = 4, gamma = 0.95, max_reward_strength = None, cost_param = 0):
         super().__init__(env, learning_rate, gamma)     
         self.policing_subagents = []
         for policed_agent in policed_agents:
-            self.policing_subagents.append(Policing_Sub_Agent(env,policed_agent,learning_rate,n_units,gamma, max_reward_strength))
+            self.policing_subagents.append(
+                Policing_Sub_Agent(env,policed_agent,learning_rate,n_units,gamma, max_reward_strength, cost_param))
 
     def learn(self, s, a_players):
         for (a,policing_subagent) in zip(a_players,self.policing_subagents):
@@ -26,9 +27,9 @@ class Policing_Agent(Agent):
         return [policing_subagent.choose_action(s,a) for (a,policing_subagent) in zip(player_actions,self.policing_subagents)]
 
 class Policing_Sub_Agent(Agent):
-    def __init__(self, env, policed_agent, learning_rate=0.01, n_units = 4, gamma = 0.95, max_reward_strength = None):
+    def __init__(self, env, policed_agent, learning_rate=0.01, n_units = 4, gamma = 0.95, max_reward_strength = None, cost_param = 0):
         super().__init__(env, learning_rate, gamma)
-        self.n_policing_actions = 2
+        self.cost_param = cost_param
         self.policed_agent = policed_agent
         self.log = []
         self.max_reward_strength = max_reward_strength
@@ -82,7 +83,7 @@ class Policing_Sub_Agent(Agent):
             self.g_Vp_d = g_log_prob * self.vp
             self.g_V_d = g_log_prob * self.v
 
-            self.cost = - policed_agent.learning_rate * tf.tensordot(self.g_Vp_d,self.g_V_d,1)
+            self.cost = - policed_agent.learning_rate * tf.tensordot(self.g_Vp_d,self.g_V_d,1) + self.cost_param * tf.square(self.vp)
 
         with tf.variable_scope('trainPolicingAgent'):
             self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(self.cost, 
