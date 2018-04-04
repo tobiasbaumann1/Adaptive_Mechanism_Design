@@ -3,14 +3,13 @@ import numpy as np
 import logging
 logging.basicConfig(filename='Policing_Agent.log',level=logging.DEBUG,filemode='w')
 from Agents import Agent
-MAX_REWARD_STRENGTH = 3
 
 class Policing_Agent(Agent):
-    def __init__(self, env, policed_agents, learning_rate=0.01, n_units = 4, gamma = 0.95):
+    def __init__(self, env, policed_agents, learning_rate=0.01, n_units = 4, gamma = 0.95, max_reward_strength = None):
         super().__init__(env, learning_rate, gamma)     
         self.policing_subagents = []
         for policed_agent in policed_agents:
-            self.policing_subagents.append(Policing_Sub_Agent(env,policed_agent,learning_rate,n_units,gamma))
+            self.policing_subagents.append(Policing_Sub_Agent(env,policed_agent,learning_rate,n_units,gamma, max_reward_strength))
 
     def learn(self, s, a_players):
         for (a,policing_subagent) in zip(a_players,self.policing_subagents):
@@ -23,11 +22,12 @@ class Policing_Agent(Agent):
         return [policing_subagent.choose_action(s,a) for (a,policing_subagent) in zip(player_actions,self.policing_subagents)]
 
 class Policing_Sub_Agent(Agent):
-    def __init__(self, env, policed_agent, learning_rate=0.01, n_units = 4, gamma = 0.95):
+    def __init__(self, env, policed_agent, learning_rate=0.01, n_units = 4, gamma = 0.95, max_reward_strength = None):
         super().__init__(env, learning_rate, gamma)
         self.n_policing_actions = 2
         self.policed_agent = policed_agent
-        self.log = [] # logs action probabilities
+        self.log = []
+        self.max_reward_strength = max_reward_strength
 
         self.s = tf.placeholder(tf.float32, [1, env.n_features], "state")   
         self.a_player = tf.placeholder(tf.float32, None, "player_action")
@@ -52,11 +52,17 @@ class Policing_Sub_Agent(Agent):
                 name='actions_policing'
             )
 
-            self.action_layer = tf.sigmoid(self.l1)
+            if max_reward_strength is None:
+                self.action_layer = self.l1
+            else:
+                self.action_layer = tf.sigmoid(self.l1)
 
         with tf.variable_scope('Vp'):
             # Vp is trivial to calculate in this special case
-            self.vp = 2 * MAX_REWARD_STRENGTH * (self.action_layer - 0.5)
+            if max_reward_strength is not None:
+                self.vp = 2 * max_reward_strength * (self.action_layer - 0.5)
+            else:
+                self.vp = self.action_layer
 
         with tf.variable_scope('V_total'):
             # V is trivial to calculate in this special case
@@ -96,15 +102,21 @@ class Policing_Sub_Agent(Agent):
     def choose_action(self, s, a):
         logging.info('Player action: ' + str(a))
         s = s[np.newaxis, :]
-        action = self.sess.run(self.action_layer, {self.s: s, self.a_player: a}) 
+        action = self.sess.run(self.action_layer, {self.s: s, self.a_player: a})[0,0]
+        if self.max_reward_strength is not None:
+            action = 2 * self.max_reward_strength * (action - 0.5)
         logging.info('Policing action: ' + str(action))
-        # Policing action probs in the PD case
+        # Policing actions in the case of cooperation / defection
         if a == 0:
-            a_p_defect = 2 * MAX_REWARD_STRENGTH * (action[0,0] - 0.5)
-            a_p_coop = 2 * MAX_REWARD_STRENGTH * (self.sess.run(self.action_layer, {self.s: s, self.a_player: 1})[0,0] - 0.5)
+            a_p_defect = action
+            a_p_coop = self.sess.run(self.action_layer, {self.s: s, self.a_player: 1})[0,0]
+            if self.max_reward_strength is not None:
+                a_p_coop = 2 * self.max_reward_strength * (a_p_coop-0.5)
         else:
-            a_p_coop = 2 * MAX_REWARD_STRENGTH * (action[0,0] - 0.5)
-            a_p_defect = 2 * MAX_REWARD_STRENGTH * (self.sess.run(self.action_layer, {self.s: s, self.a_player: 0})[0,0] - 0.5)
+            a_p_coop = action
+            a_p_defect = self.sess.run(self.action_layer, {self.s: s, self.a_player: 0})[0,0]
+            if self.max_reward_strength is not None:
+                a_p_defect = 2 * self.max_reward_strength * (a_p_defect-0.5)
         self.log.append([a_p_defect,a_p_coop])
-        return 2 * MAX_REWARD_STRENGTH * (action[0,0] - 0.5)
+        return action
 
