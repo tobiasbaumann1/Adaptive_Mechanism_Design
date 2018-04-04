@@ -4,6 +4,10 @@ import logging
 logging.basicConfig(filename='Policing_Agent.log',level=logging.DEBUG,filemode='w')
 from Agents import Agent
 
+RANDOM_SEED = 8
+np.random.seed(RANDOM_SEED)
+tf.set_random_seed(RANDOM_SEED)
+
 class Policing_Agent(Agent):
     def __init__(self, env, policed_agents, learning_rate=0.01, n_units = 4, gamma = 0.95, max_reward_strength = None):
         super().__init__(env, learning_rate, gamma)     

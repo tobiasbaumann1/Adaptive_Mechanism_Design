@@ -3,7 +3,7 @@ import tensorflow as tf
 import logging
 logging.basicConfig(filename='Agents.log',level=logging.DEBUG)
 
-RANDOM_SEED = 4
+RANDOM_SEED = 8
 np.random.seed(RANDOM_SEED)
 tf.set_random_seed(RANDOM_SEED)
 
