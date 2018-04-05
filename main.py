@@ -4,7 +4,7 @@ import logging
 logging.basicConfig(filename='main.log',level=logging.DEBUG,filemode='w')
 from Environments import Prisoners_Dilemma
 from Agents import Actor_Critic_Agent, Critic_Variant, Simple_Agent
-from Policing_Agent import Policing_Agent
+from Planning_Agent import Planning_Agent
 
 HISTORY_LENGTH = 5 # the NN will use the actions from this many past rounds to determine its action
 N_EPISODES = 4000
@@ -12,15 +12,15 @@ N_PLAYERS = 2
 N_UNITS = 1 #number of nodes in the intermediate layer of the NN
 MAX_REWARD_STRENGTH = 3
 
-def run_game(N_EPISODES, players, policing_agent = None, redistribution = True):
+def run_game(N_EPISODES, players, planning_agent = None, redistribution = True):
     env.reset_ep_ctr()
-    avg_policing_rewards_per_round = []
+    avg_planning_rewards_per_round = []
     for episode in range(N_EPISODES):
         # initial observation
         s = env.reset()
         flag = isinstance(s, list)
 
-        cum_policing_rs = [0]*len(players)
+        cum_planning_rs = [0]*len(players)
         while True:
             # choose action based on s
             if flag:
@@ -32,16 +32,16 @@ def run_game(N_EPISODES, players, policing_agent = None, redistribution = True):
             # take action and get next s and reward
             s_, rewards, done = env.step(actions)
 
-            if policing_agent is not None:
-                policing_rs = policing_agent.choose_action(s,actions)
+            if planning_agent is not None:
+                planning_rs = planning_agent.choose_action(s,actions)
                 if redistribution:
-                    sum_policing_r = sum(policing_rs)
-                    mean_policing_r = sum_policing_r / N_PLAYERS
-                    policing_rs = [r-mean_policing_r for r in policing_rs]
-                rewards = [ sum(r) for r in zip(rewards,policing_rs)]
-                cum_policing_rs = [sum(r) for r in zip(cum_policing_rs, policing_rs)]
-                # Training policing agent
-                policing_agent.learn(s,actions)
+                    sum_planning_r = sum(planning_rs)
+                    mean_planning_r = sum_planning_r / N_PLAYERS
+                    planning_rs = [r-mean_planning_r for r in planning_rs]
+                rewards = [ sum(r) for r in zip(rewards,planning_rs)]
+                cum_planning_rs = [sum(r) for r in zip(cum_planning_rs, planning_rs)]
+                # Training planning agent
+                planning_agent.learn(s,actions)
             logging.info('Actions:' + str(actions))
             logging.info('State after:' + str(s_))
             logging.info('Rewards: ' + str(rewards))
@@ -61,12 +61,12 @@ def run_game(N_EPISODES, players, policing_agent = None, redistribution = True):
                 for player in players:
                     player.learn_at_episode_end() 
                 break
-        avg_policing_rewards_per_round.append([r / env.step_ctr for r in cum_policing_rs])
+        avg_planning_rewards_per_round.append([r / env.step_ctr for r in cum_planning_rs])
 
         # status updates
         if (episode+1) % 100 == 0:
             print('Episode {} finished.'.format(episode + 1))
-    return env.get_avg_rewards_per_round(), np.asarray(avg_policing_rewards_per_round)
+    return env.get_avg_rewards_per_round(), np.asarray(avg_planning_rewards_per_round)
 
 def plot_results(avg_rewards_per_round, legend, title, ylabel = 'Reward', exp_factor = 1):
     plt.figure()
@@ -110,12 +110,12 @@ if __name__ == "__main__":
 
     env = Prisoners_Dilemma()    
     agents = create_population(env,N_PLAYERS, use_simple_agents = True)
-    policing_agent = Policing_Agent(env,agents,max_reward_strength = 3, cost_param = 0.0005)
+    planning_agent = Planning_Agent(env,agents,max_reward_strength = 3, cost_param = 0.0005)
 
-    avg_rewards_per_round,avg_policing_rewards_per_round = run_game(N_EPISODES,agents,policing_agent)
+    avg_rewards_per_round,avg_planning_rewards_per_round = run_game(N_EPISODES,agents,planning_agent)
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__(), exp_factor=0.1)
-    plot_results(avg_policing_rewards_per_round,[str(agent) for agent in agents],env.__str__()+'_policing_rewards', exp_factor=0.1)
+    plot_results(avg_planning_rewards_per_round,[str(agent) for agent in agents],env.__str__()+'_planning_rewards', exp_factor=0.1)
     actor_a_prob_each_round = np.transpose(np.array([agent.log for agent in agents]))
     plot_results(actor_a_prob_each_round,[str(agent) for agent in agents],env.__str__()+'_player_action_probabilities', ylabel = 'P(Cooperation)')
-    policing_a_prob_each_round = np.array(policing_agent.get_log()[0])
-    plot_results(policing_a_prob_each_round,['Agent plays D', 'Agent plays C'],env.__str__()+'_policing_action', ylabel = 'a_p')
+    planning_a_prob_each_round = np.array(planning_agent.get_log()[0])
+    plot_results(planning_a_prob_each_round,['Agent plays D', 'Agent plays C'],env.__str__()+'_planning_action', ylabel = 'a_p')
