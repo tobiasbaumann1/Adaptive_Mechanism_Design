@@ -7,7 +7,7 @@ from Environments import Prisoners_Dilemma
 from Agents import Actor_Critic_Agent, Critic_Variant, Simple_Agent
 from Planning_Agent import Planning_Agent
 
-N_EPISODES = 4000
+N_EPISODES = 2000
 N_PLAYERS = 2
 N_UNITS = 10 #number of nodes in the intermediate layer of the NN
 MAX_REWARD_STRENGTH = 3
@@ -114,7 +114,7 @@ def run_game_and_plot_results(env,agents,
         cost_param = cost_param, with_redistribution = with_redistribution)
     avg_rewards_per_round,avg_planning_rewards_per_round = run_game(N_EPISODES,agents,planning_agent, 
         with_redistribution = with_redistribution)
-    path = './Results/with' + ('' if with_redistribution else 'out') + '_redistribution' 
+    path = './Results/different_seed/with' + ('' if with_redistribution else 'out') + '_redistribution' 
     path += '/' + 'max_reward_strength_' + (str(max_reward_strength) if max_reward_strength is not None else 'inf')
     path += '/' + 'cost_parameter_' + str(cost_param)
 
@@ -129,4 +129,4 @@ if __name__ == "__main__":
 
     env = Prisoners_Dilemma()    
     agents = create_population(env,N_PLAYERS, use_simple_agents = True)
-    run_game_and_plot_results(env,agents,with_redistribution=False, max_reward_strength = 3, cost_param = 0.02)    
+    run_game_and_plot_results(env,agents,with_redistribution=False, max_reward_strength = 3, cost_param = 0)    
