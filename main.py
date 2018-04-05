@@ -7,10 +7,9 @@ from Environments import Prisoners_Dilemma
 from Agents import Actor_Critic_Agent, Critic_Variant, Simple_Agent
 from Planning_Agent import Planning_Agent
 
-HISTORY_LENGTH = 5 # the NN will use the actions from this many past rounds to determine its action
-N_EPISODES = 2000
+N_EPISODES = 4000
 N_PLAYERS = 2
-N_UNITS = 1 #number of nodes in the intermediate layer of the NN
+N_UNITS = 10 #number of nodes in the intermediate layer of the NN
 MAX_REWARD_STRENGTH = 3
 
 def run_game(N_EPISODES, players, planning_agent = None, with_redistribution = True):
@@ -116,8 +115,8 @@ def run_game_and_plot_results(env,agents,
     avg_rewards_per_round,avg_planning_rewards_per_round = run_game(N_EPISODES,agents,planning_agent, 
         with_redistribution = with_redistribution)
     path = './Results/with' + ('' if with_redistribution else 'out') + '_redistribution' 
-    path += '.' + 'max_reward_strength_' + str(max_reward_strength) if max_reward_strength is not None else 'inf'
-    path += '.' + 'cost_parameter_' + str(cost_param)
+    path += '/' + 'max_reward_strength_' + (str(max_reward_strength) if max_reward_strength is not None else 'inf')
+    path += '/' + 'cost_parameter_' + str(cost_param)
 
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents],path,env.__str__(), exp_factor=0.1)
     plot_results(avg_planning_rewards_per_round,[str(agent) for agent in agents],path,env.__str__()+'_planning_rewards', exp_factor=0.1)
@@ -130,4 +129,4 @@ if __name__ == "__main__":
 
     env = Prisoners_Dilemma()    
     agents = create_population(env,N_PLAYERS, use_simple_agents = True)
-    run_game_and_plot_results(env,agents,with_redistribution=True, max_reward_strength = 3, cost_param = 0)    
+    run_game_and_plot_results(env,agents,with_redistribution=False, max_reward_strength = 3, cost_param = 0.02)    
