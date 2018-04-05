@@ -7,12 +7,12 @@ from Agents import Actor_Critic_Agent, Critic_Variant, Simple_Agent
 from Planning_Agent import Planning_Agent
 
 HISTORY_LENGTH = 5 # the NN will use the actions from this many past rounds to determine its action
-N_EPISODES = 4000
+N_EPISODES = 2000
 N_PLAYERS = 2
 N_UNITS = 1 #number of nodes in the intermediate layer of the NN
 MAX_REWARD_STRENGTH = 3
 
-def run_game(N_EPISODES, players, planning_agent = None, redistribution = True):
+def run_game(N_EPISODES, players, planning_agent = None, with_redistribution = True):
     env.reset_ep_ctr()
     avg_planning_rewards_per_round = []
     for episode in range(N_EPISODES):
@@ -34,7 +34,7 @@ def run_game(N_EPISODES, players, planning_agent = None, redistribution = True):
 
             if planning_agent is not None:
                 planning_rs = planning_agent.choose_action(s,actions)
-                if redistribution:
+                if with_redistribution:
                     sum_planning_r = sum(planning_rs)
                     mean_planning_r = sum_planning_r / N_PLAYERS
                     planning_rs = [r-mean_planning_r for r in planning_rs]
@@ -110,12 +110,15 @@ if __name__ == "__main__":
 
     env = Prisoners_Dilemma()    
     agents = create_population(env,N_PLAYERS, use_simple_agents = True)
-    planning_agent = Planning_Agent(env,agents,max_reward_strength = 3, cost_param = 0.0005)
+    WITH_REDISTRIBUTION = False
+    planning_agent = Planning_Agent(env,agents,max_reward_strength = 5, cost_param = 0, 
+        with_redistribution = WITH_REDISTRIBUTION)
 
-    avg_rewards_per_round,avg_planning_rewards_per_round = run_game(N_EPISODES,agents,planning_agent)
+    avg_rewards_per_round,avg_planning_rewards_per_round = run_game(N_EPISODES,agents,planning_agent, 
+        with_redistribution = WITH_REDISTRIBUTION)
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__(), exp_factor=0.1)
     plot_results(avg_planning_rewards_per_round,[str(agent) for agent in agents],env.__str__()+'_planning_rewards', exp_factor=0.1)
     actor_a_prob_each_round = np.transpose(np.array([agent.log for agent in agents]))
     plot_results(actor_a_prob_each_round,[str(agent) for agent in agents],env.__str__()+'_player_action_probabilities', ylabel = 'P(Cooperation)')
-    planning_a_prob_each_round = np.array(planning_agent.get_log()[0])
-    plot_results(planning_a_prob_each_round,['Agent plays D', 'Agent plays C'],env.__str__()+'_planning_action', ylabel = 'a_p')
+    planning_a_prob_each_round = np.array(planning_agent.get_log())
+    plot_results(planning_a_prob_each_round,['(D,D)', '(C,D)', '(D,C)', '(C,C)'],env.__str__()+'_planning_action', ylabel = 'a_p')
