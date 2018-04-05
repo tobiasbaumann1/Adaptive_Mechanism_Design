@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import logging
 logging.basicConfig(filename='main.log',level=logging.DEBUG,filemode='w')
 from Environments import Prisoners_Dilemma
@@ -68,7 +69,7 @@ def run_game(N_EPISODES, players, planning_agent = None, with_redistribution = T
             print('Episode {} finished.'.format(episode + 1))
     return env.get_avg_rewards_per_round(), np.asarray(avg_planning_rewards_per_round)
 
-def plot_results(avg_rewards_per_round, legend, title, ylabel = 'Reward', exp_factor = 1):
+def plot_results(avg_rewards_per_round, legend, path, title, ylabel = 'Reward', exp_factor = 1):
     plt.figure()
     for agent_idx in range(avg_rewards_per_round.shape[1]):
         avg = avg_rewards_per_round[0,agent_idx]
@@ -82,7 +83,9 @@ def plot_results(avg_rewards_per_round, legend, title, ylabel = 'Reward', exp_fa
     plt.ylabel(ylabel)
     plt.legend(legend)
     plt.title(title)
-    plt.savefig('./'+title)
+    if not os.path.exists(path):
+        os.makedirs(path)
+    plt.savefig(path+'/' + title)
     #plt.show()
 
 def create_population(env,n_agents, use_simple_agents = False):    
@@ -106,19 +109,25 @@ def create_population(env,n_agents, use_simple_agents = False):
             agent.pass_agent_list(l)
     return l
 
+def run_game_and_plot_results(env,agents, 
+    with_redistribution = False, max_reward_strength = None, cost_param = 0):
+    planning_agent = Planning_Agent(env,agents,max_reward_strength = max_reward_strength, 
+        cost_param = cost_param, with_redistribution = with_redistribution)
+    avg_rewards_per_round,avg_planning_rewards_per_round = run_game(N_EPISODES,agents,planning_agent, 
+        with_redistribution = with_redistribution)
+    path = './Results/with' + ('' if with_redistribution else 'out') + '_redistribution' 
+    path += '.' + 'max_reward_strength_' + str(max_reward_strength) if max_reward_strength is not None else 'inf'
+    path += '.' + 'cost_parameter_' + str(cost_param)
+
+    plot_results(avg_rewards_per_round,[str(agent) for agent in agents],path,env.__str__(), exp_factor=0.1)
+    plot_results(avg_planning_rewards_per_round,[str(agent) for agent in agents],path,env.__str__()+'_planning_rewards', exp_factor=0.1)
+    actor_a_prob_each_round = np.transpose(np.array([agent.log for agent in agents]))
+    plot_results(actor_a_prob_each_round,[str(agent) for agent in agents],path,env.__str__()+'_player_action_probabilities', ylabel = 'P(Cooperation)')
+    planning_a_prob_each_round = np.array(planning_agent.get_log())
+    plot_results(planning_a_prob_each_round,['(D,D)', '(C,D)', '(D,C)', '(C,C)'],path,env.__str__()+'_planning_action', ylabel = 'a_p')
+    
 if __name__ == "__main__":
 
     env = Prisoners_Dilemma()    
     agents = create_population(env,N_PLAYERS, use_simple_agents = True)
-    WITH_REDISTRIBUTION = False
-    planning_agent = Planning_Agent(env,agents,max_reward_strength = 5, cost_param = 0, 
-        with_redistribution = WITH_REDISTRIBUTION)
-
-    avg_rewards_per_round,avg_planning_rewards_per_round = run_game(N_EPISODES,agents,planning_agent, 
-        with_redistribution = WITH_REDISTRIBUTION)
-    plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__(), exp_factor=0.1)
-    plot_results(avg_planning_rewards_per_round,[str(agent) for agent in agents],env.__str__()+'_planning_rewards', exp_factor=0.1)
-    actor_a_prob_each_round = np.transpose(np.array([agent.log for agent in agents]))
-    plot_results(actor_a_prob_each_round,[str(agent) for agent in agents],env.__str__()+'_player_action_probabilities', ylabel = 'P(Cooperation)')
-    planning_a_prob_each_round = np.array(planning_agent.get_log())
-    plot_results(planning_a_prob_each_round,['(D,D)', '(C,D)', '(D,C)', '(C,C)'],env.__str__()+'_planning_action', ylabel = 'a_p')
+    run_game_and_plot_results(env,agents,with_redistribution=True, max_reward_strength = 3, cost_param = 0)    
