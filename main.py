@@ -7,7 +7,7 @@ from Agents import Actor_Critic_Agent, Critic_Variant, Simple_Agent
 from Policing_Agent import Policing_Agent
 
 HISTORY_LENGTH = 5 # the NN will use the actions from this many past rounds to determine its action
-N_EPISODES = 2000
+N_EPISODES = 4000
 N_PLAYERS = 2
 N_UNITS = 1 #number of nodes in the intermediate layer of the NN
 MAX_REWARD_STRENGTH = 3
@@ -110,7 +110,7 @@ if __name__ == "__main__":
 
     env = Prisoners_Dilemma()    
     agents = create_population(env,N_PLAYERS, use_simple_agents = True)
-    policing_agent = Policing_Agent(env,agents,max_reward_strength = None, cost_param = 0.0005)
+    policing_agent = Policing_Agent(env,agents,max_reward_strength = 3, cost_param = 0.0005)
 
     avg_rewards_per_round,avg_policing_rewards_per_round = run_game(N_EPISODES,agents,policing_agent)
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents],env.__str__(), exp_factor=0.1)
