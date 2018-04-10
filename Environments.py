@@ -138,9 +138,9 @@ class Multi_Agent_Random_Prisoners_Dilemma(Environment):
         return "Prisoner's Dilemma between randomly selected agents"
 
 class Matrix_Game(Environment):
-    def __init__(self, greed, fear):
-        self.greed = greed
+    def __init__(self, fear, greed):
         self.fear = fear
+        self.greed = greed
         N_ACTIONS = 2
         N_PLAYERS = 2
         N_FEATURES = 1 # just a dummy feature to avoid errors. No meaning

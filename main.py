@@ -126,11 +126,21 @@ def run_game_and_plot_results(env,agents,
     actor_a_prob_each_round = np.transpose(np.array([agent.log for agent in agents]))
     plot_results(actor_a_prob_each_round,[str(agent) for agent in agents],path,'player_action_probabilities', ylabel = 'P(Cooperation)')
     planning_a_prob_each_round = np.array(planning_agent.get_log())
+    fear_and_greed_each_round = calc_fear_and_greed(planning_a_prob_each_round, env.fear, env.greed)
     plot_results(planning_a_prob_each_round,['(D,D)', '(C,D)', '(D,C)', '(C,C)'],path,'planning_action', ylabel = 'a_p')
+    plot_results(fear_and_greed_each_round,['Fear', 'Greed'],path,'modified_fear_and_greed', ylabel = 'Fear/Greed')
+
+def calc_fear_and_greed(data, base_fear, base_greed):
+    assert(data.shape[1] == 4)
+    fear = data[:,0]-data[:,1] + base_fear
+    greed = data[:,2]-data[:,3] + base_greed
+    return np.stack([fear,greed],axis = 1)
+
     
 if __name__ == "__main__":
-
-    env = Matrix_Game(fear = 1, greed = 1)
+    FEAR = 1
+    GREED = -1
+    env = Matrix_Game(fear = FEAR, greed = GREED)
     agents = create_population(env,N_PLAYERS, use_simple_agents = True)
     run_game_and_plot_results(env,agents,with_redistribution=False, max_reward_strength = 3, 
         cost_param = 0, n_planning_eps = N_EPISODES / 2)    
