@@ -137,46 +137,37 @@ class Multi_Agent_Random_Prisoners_Dilemma(Environment):
     def __str__(self):
         return "Prisoner's Dilemma between randomly selected agents"
 
-class Prisoners_Dilemma(Environment):
-    def __init__(self, signal_possible = False, option_to_abstain = False):
-        self.signal_possible = signal_possible
-        self.option_to_abstain = option_to_abstain
-        N_ACTIONS = 3 if option_to_abstain else 2
-        N_FEATURES = 3 if signal_possible else 1
-        EPISODE_LENGTH = 2 if signal_possible else 1
-        super().__init__(N_ACTIONS, 2, EPISODE_LENGTH, N_FEATURES)
+class Matrix_Game(Environment):
+    def __init__(self, greed, fear):
+        self.greed = greed
+        self.fear = fear
+        N_ACTIONS = 2
+        N_PLAYERS = 2
+        N_FEATURES = 1 # just a dummy feature to avoid errors. No meaning
+        EPISODE_LENGTH = 1
+        super().__init__(N_ACTIONS, N_PLAYERS, EPISODE_LENGTH, N_FEATURES)
 
     def initial_state(self):
-        if self.signal_possible:
-            return np.zeros(3)
-        else:
-            return np.zeros(1) #dummy feature to avoid errors. No meaning
-
-    def update_state(self, actions):
-        if self.signal_possible:
-            if self.s[0] == 0: # 0 corresponds to being in the communication phase, 1 in the actual execution phase
-                self.s[0] = 1 
-                self.s[1] = min(actions[0],1)
-                self.s[2] = min(actions[1],1)
-        else:
-            pass
+        return np.zeros(1) #dummy feature 
 
     def calculate_payoffs(self, actions):
-        if self.signal_possible and self.s[0] == 0:
-            return [0] * 2 # no rewards in communication step
-        else:
-            if self.option_to_abstain and 2 in actions:
-                return [0] * 2
+        R = 3
+        P = 1
+        T = R+self.greed
+        S = P-self.fear
+        assert actions[0] == 1 or actions[0] == 0
+        assert actions[1] == 1 or actions[1] == 0
+        if actions[0] == 1: 
+            if actions[1] == 0:
+                return [S,T]
             else:
-                r0 = -1 - 2 * actions[0] + 4*actions[1] 
-                r1 = -1 - 2 * actions[1] + 4*actions[0] 
-                if self.signal_possible:
-                    r0 = r0 - 4 * self.s[1]*(1-actions[0])
-                    r1 = r1 - 4 * self.s[2]*(1-actions[1])
-                return [r0,r1]
+                return [R,R]
+        else:
+            if actions[1] == 0:
+                return [P,P]
+            else:
+                return [T,S]
 
     def __str__(self):
-        description = "Prisoner's_dilemma"
-        if self.option_to_abstain:
-            description = description + "_with_option_to_abstain" 
+        description = "Matrix_Game_Greed=" + str(self.greed) + "_Fear=" + str(self.fear)
         return description

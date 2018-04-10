@@ -4,7 +4,7 @@ import logging
 logging.basicConfig(filename='Planning_Agent.log',level=logging.DEBUG,filemode='w')
 from Agents import Agent
 
-RANDOM_SEED = 5
+RANDOM_SEED = 4
 np.random.seed(RANDOM_SEED)
 tf.set_random_seed(RANDOM_SEED)
 

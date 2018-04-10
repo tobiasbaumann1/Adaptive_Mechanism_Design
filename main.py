@@ -3,7 +3,7 @@ import numpy as np
 import os
 import logging
 logging.basicConfig(filename='main.log',level=logging.DEBUG,filemode='w')
-from Environments import Prisoners_Dilemma
+from Environments import Matrix_Game
 from Agents import Actor_Critic_Agent, Critic_Variant, Simple_Agent
 from Planning_Agent import Planning_Agent
 
@@ -114,19 +114,19 @@ def run_game_and_plot_results(env,agents,
         cost_param = cost_param, with_redistribution = with_redistribution)
     avg_rewards_per_round,avg_planning_rewards_per_round = run_game(N_EPISODES,agents,planning_agent, 
         with_redistribution = with_redistribution)
-    path = './Results/different_seed/with' + ('' if with_redistribution else 'out') + '_redistribution' 
+    path = './Results/' + env.__str__() +'/with' + ('' if with_redistribution else 'out') + '_redistribution' 
     path += '/' + 'max_reward_strength_' + (str(max_reward_strength) if max_reward_strength is not None else 'inf')
     path += '/' + 'cost_parameter_' + str(cost_param)
 
-    plot_results(avg_rewards_per_round,[str(agent) for agent in agents],path,env.__str__(), exp_factor=0.1)
-    plot_results(avg_planning_rewards_per_round,[str(agent) for agent in agents],path,env.__str__()+'_planning_rewards', exp_factor=0.1)
+    plot_results(avg_rewards_per_round,[str(agent) for agent in agents],path,'average_rewards', exp_factor=0.1)
+    plot_results(avg_planning_rewards_per_round,[str(agent) for agent in agents],path,'planning_rewards', exp_factor=0.1)
     actor_a_prob_each_round = np.transpose(np.array([agent.log for agent in agents]))
-    plot_results(actor_a_prob_each_round,[str(agent) for agent in agents],path,env.__str__()+'_player_action_probabilities', ylabel = 'P(Cooperation)')
+    plot_results(actor_a_prob_each_round,[str(agent) for agent in agents],path,'player_action_probabilities', ylabel = 'P(Cooperation)')
     planning_a_prob_each_round = np.array(planning_agent.get_log())
-    plot_results(planning_a_prob_each_round,['(D,D)', '(C,D)', '(D,C)', '(C,C)'],path,env.__str__()+'_planning_action', ylabel = 'a_p')
+    plot_results(planning_a_prob_each_round,['(D,D)', '(C,D)', '(D,C)', '(C,C)'],path,'planning_action', ylabel = 'a_p')
     
 if __name__ == "__main__":
 
-    env = Prisoners_Dilemma()    
+    env = Matrix_Game(fear = 1, greed = 1) #Prisoner's Dilemma    
     agents = create_population(env,N_PLAYERS, use_simple_agents = True)
     run_game_and_plot_results(env,agents,with_redistribution=False, max_reward_strength = 3, cost_param = 0)    
