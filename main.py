@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import math
 import os
 import logging
 logging.basicConfig(filename='main.log',level=logging.DEBUG,filemode='w')
@@ -7,12 +8,13 @@ from Environments import Matrix_Game
 from Agents import Actor_Critic_Agent, Critic_Variant, Simple_Agent
 from Planning_Agent import Planning_Agent
 
-N_EPISODES = 2000
+N_EPISODES = 4000
 N_PLAYERS = 2
 N_UNITS = 10 #number of nodes in the intermediate layer of the NN
 MAX_REWARD_STRENGTH = 3
 
-def run_game(N_EPISODES, players, planning_agent = None, with_redistribution = True):
+def run_game(N_EPISODES, players, planning_agent = None, with_redistribution = True, 
+    n_planning_eps = math.inf):
     env.reset_ep_ctr()
     avg_planning_rewards_per_round = []
     for episode in range(N_EPISODES):
@@ -32,7 +34,7 @@ def run_game(N_EPISODES, players, planning_agent = None, with_redistribution = T
             # take action and get next s and reward
             s_, rewards, done = env.step(actions)
 
-            if planning_agent is not None:
+            if planning_agent is not None and episode < n_planning_eps:
                 planning_rs = planning_agent.choose_action(s,actions)
                 if with_redistribution:
                     sum_planning_r = sum(planning_rs)
@@ -109,11 +111,12 @@ def create_population(env,n_agents, use_simple_agents = False):
     return l
 
 def run_game_and_plot_results(env,agents, 
-    with_redistribution = False, max_reward_strength = None, cost_param = 0):
+    with_redistribution = False, max_reward_strength = None, cost_param = 0,
+    n_planning_eps = math.inf):
     planning_agent = Planning_Agent(env,agents,max_reward_strength = max_reward_strength, 
         cost_param = cost_param, with_redistribution = with_redistribution)
     avg_rewards_per_round,avg_planning_rewards_per_round = run_game(N_EPISODES,agents,planning_agent, 
-        with_redistribution = with_redistribution)
+        with_redistribution = with_redistribution, n_planning_eps = n_planning_eps)
     path = './Results/' + env.__str__() +'/with' + ('' if with_redistribution else 'out') + '_redistribution' 
     path += '/' + 'max_reward_strength_' + (str(max_reward_strength) if max_reward_strength is not None else 'inf')
     path += '/' + 'cost_parameter_' + str(cost_param)
@@ -127,6 +130,7 @@ def run_game_and_plot_results(env,agents,
     
 if __name__ == "__main__":
 
-    env = Matrix_Game(fear = 1, greed = 1) #Prisoner's Dilemma    
+    env = Matrix_Game(fear = 1, greed = 1)
     agents = create_population(env,N_PLAYERS, use_simple_agents = True)
-    run_game_and_plot_results(env,agents,with_redistribution=False, max_reward_strength = 3, cost_param = 0)    
+    run_game_and_plot_results(env,agents,with_redistribution=False, max_reward_strength = 3, 
+        cost_param = 0, n_planning_eps = N_EPISODES / 2)    

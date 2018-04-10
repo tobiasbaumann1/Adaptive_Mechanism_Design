@@ -46,7 +46,7 @@ class Planning_Agent(Agent):
 
         with tf.variable_scope('V_total'):
             # V is trivial to calculate in this special case
-            self.v = 4 * self.a_players - 0.5
+            self.v = 2 * self.a_players - 1
 
         with tf.variable_scope('cost_function'):
             cost_list = []
