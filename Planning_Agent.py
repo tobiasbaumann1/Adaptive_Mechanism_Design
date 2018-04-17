@@ -46,7 +46,7 @@ class Planning_Agent(Agent):
 
         with tf.variable_scope('V_total'):
             # V is trivial to calculate in this special case
-            self.v = 2 * self.a_players - 1
+            self.v = tf.reduce_sum(self.a_players) - 0.8
 
         with tf.variable_scope('cost_function'):
             cost_list = []
@@ -60,7 +60,7 @@ class Planning_Agent(Agent):
 
                 # policy gradient theorem
                 self.g_Vp_d = g_log_prob * self.vp[0,idx]
-                self.g_V_d = g_log_prob * self.v[0,idx]
+                self.g_V_d = g_log_prob * self.v
 
                 cost_list.append(- underlying_agent.learning_rate * tf.tensordot(self.g_Vp_d,self.g_V_d,1))
             if with_redistribution:
