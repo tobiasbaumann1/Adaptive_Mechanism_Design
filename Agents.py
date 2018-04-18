@@ -189,8 +189,9 @@ class Simple_Agent(Agent): #plays games with 2 actions, using a single parameter
             self.actions_prob = tf.expand_dims(tf.concat([1-tf.sigmoid(self.theta),tf.sigmoid(self.theta)],0),0)
 
         with tf.variable_scope('exp_v'):
-            log_prob = tf.log(self.actions_prob[0,self.a])
-            self.exp_v = tf.reduce_mean(log_prob * self.td_error)  
+            self.log_prob = tf.log(self.actions_prob[0,self.a])
+            self.g_log_pi = tf.gradients(self.log_prob,self.theta)
+            self.exp_v = tf.reduce_mean(self.log_prob * self.td_error)  
 
         with tf.variable_scope('trainActor'):
             self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(-self.exp_v) 
@@ -218,12 +219,8 @@ class Simple_Agent(Agent): #plays games with 2 actions, using a single parameter
     def pass_agent_list(self, agent_list):
         self.critic.pass_agent_list(agent_list)
 
-    def get_action_prob_variable(self):
-        return self.actions_prob
-
     def get_state_variable(self):
         return self.s
 
-    def get_policy_parameters(self):
-        return [self.theta]
-
+    def calc_g_log_pi(self,s,a):
+        return self.sess.run(self.g_log_pi,feed_dict={self.s:s,self.a:a})

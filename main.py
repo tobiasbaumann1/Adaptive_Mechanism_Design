@@ -139,8 +139,8 @@ def calc_fear_and_greed(data, base_fear, base_greed):
     
 if __name__ == "__main__":
     FEAR = 1
-    GREED = 1
+    GREED = -1
     env = Matrix_Game(fear = FEAR, greed = GREED)
     agents = create_population(env,N_PLAYERS, use_simple_agents = True)
     run_game_and_plot_results(env,agents,with_redistribution=False, max_reward_strength = 3, 
-        cost_param = 0, n_planning_eps = N_EPISODES / 2)    
+        cost_param = 0.0015)    
