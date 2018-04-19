@@ -70,12 +70,12 @@ def run_game(N_EPISODES, players, planning_agent = None, with_redistribution = T
             print('Episode {} finished.'.format(episode + 1))
     return env.get_avg_rewards_per_round(), np.asarray(avg_planning_rewards_per_round)
 
-def plot_results(avg_rewards_per_round, legend, path, title, ylabel = 'Reward', exp_factor = 1):
+def plot_results(data, legend, path, title, ylabel = 'Reward', exp_factor = 1):
     plt.figure()
-    for agent_idx in range(avg_rewards_per_round.shape[1]):
-        avg = avg_rewards_per_round[0,agent_idx]
+    for agent_idx in range(data.shape[1]):
+        avg = data[0,agent_idx]
         avg_list = []
-        for r in avg_rewards_per_round[:,agent_idx]:
+        for r in data[:,agent_idx]:
             avg = exp_factor * r + (1-exp_factor) * avg
             avg_list.append(avg)
         first_idx = int(1 / exp_factor)
@@ -112,15 +112,17 @@ def create_population(env,n_agents, use_simple_agents = False):
 
 def run_game_and_plot_results(env,agents, 
     with_redistribution = False, max_reward_strength = None, cost_param = 0,
-    n_planning_eps = math.inf):
+    n_planning_eps = math.inf, proxy_value_function = False):
     planning_agent = Planning_Agent(env,agents,max_reward_strength = max_reward_strength, 
         cost_param = cost_param, with_redistribution = with_redistribution,
-        cheating_value_function = False)
+        proxy_value_function = proxy_value_function)
     avg_rewards_per_round,avg_planning_rewards_per_round = run_game(N_EPISODES,agents,planning_agent, 
         with_redistribution = with_redistribution, n_planning_eps = n_planning_eps)
     path = './Results/' + env.__str__() +'/with' + ('' if with_redistribution else 'out') + '_redistribution' 
     path += '/' + 'max_reward_strength_' + (str(max_reward_strength) if max_reward_strength is not None else 'inf')
     path += '/' + 'cost_parameter_' + str(cost_param)
+    path += '/' + ('proxy_value_function' if proxy_value_function else 'estimated_value_function')
+    #cumulative_planning_cost = 
 
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents],path,'average_rewards', exp_factor=0.05)
     plot_results(avg_planning_rewards_per_round,[str(agent) for agent in agents],path,'planning_rewards', exp_factor=0.05)
@@ -139,9 +141,9 @@ def calc_fear_and_greed(data, base_fear, base_greed):
 
     
 if __name__ == "__main__":
-    FEAR = 1
-    GREED = 1
+    FEAR = -1
+    GREED = 0.5
     env = Matrix_Game(fear = FEAR, greed = GREED)
     agents = create_population(env,N_PLAYERS, use_simple_agents = True)
     run_game_and_plot_results(env,agents,with_redistribution=False, max_reward_strength = 3, 
-        cost_param = 0.001)    
+        cost_param = 0.001, proxy_value_function = False)    
