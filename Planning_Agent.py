@@ -50,8 +50,7 @@ class Planning_Agent(Agent):
             if proxy_value_function:
                 self.v = 2 * self.a_players - 1
             else:
-                self.v = tf.reduce_sum(self.r_players) - 5.4
-
+                self.v = tf.reduce_sum(self.r_players) - 1.9
         with tf.variable_scope('cost_function'):
             self.g_log_pi = tf.placeholder(tf.float32, [1, n_players], "player_gradients")
             cost_list = []

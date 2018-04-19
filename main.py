@@ -122,7 +122,8 @@ def run_game_and_plot_results(env,agents,
     path += '/' + 'max_reward_strength_' + (str(max_reward_strength) if max_reward_strength is not None else 'inf')
     path += '/' + 'cost_parameter_' + str(cost_param)
     path += '/' + ('proxy_value_function' if proxy_value_function else 'estimated_value_function')
-    #cumulative_planning_cost = 
+    if n_planning_eps < math.inf:
+        path += '/' + 'turning_off' 
 
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents],path,'average_rewards', exp_factor=0.05)
     plot_results(avg_planning_rewards_per_round,[str(agent) for agent in agents],path,'planning_rewards', exp_factor=0.05)
@@ -141,9 +142,9 @@ def calc_fear_and_greed(data, base_fear, base_greed):
 
     
 if __name__ == "__main__":
-    FEAR = -1
-    GREED = 0.5
+    FEAR = 1
+    GREED = -1
     env = Matrix_Game(fear = FEAR, greed = GREED)
     agents = create_population(env,N_PLAYERS, use_simple_agents = True)
     run_game_and_plot_results(env,agents,with_redistribution=False, max_reward_strength = 3, 
-        cost_param = 0.001, proxy_value_function = False)    
+        cost_param = 0.001, proxy_value_function = False, n_planning_eps = 2000)    
