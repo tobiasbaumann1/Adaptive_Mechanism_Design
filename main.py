@@ -114,15 +114,16 @@ def run_game_and_plot_results(env,agents,
     with_redistribution = False, max_reward_strength = None, cost_param = 0,
     n_planning_eps = math.inf):
     planning_agent = Planning_Agent(env,agents,max_reward_strength = max_reward_strength, 
-        cost_param = cost_param, with_redistribution = with_redistribution)
+        cost_param = cost_param, with_redistribution = with_redistribution,
+        cheating_value_function = False)
     avg_rewards_per_round,avg_planning_rewards_per_round = run_game(N_EPISODES,agents,planning_agent, 
         with_redistribution = with_redistribution, n_planning_eps = n_planning_eps)
     path = './Results/' + env.__str__() +'/with' + ('' if with_redistribution else 'out') + '_redistribution' 
     path += '/' + 'max_reward_strength_' + (str(max_reward_strength) if max_reward_strength is not None else 'inf')
     path += '/' + 'cost_parameter_' + str(cost_param)
 
-    plot_results(avg_rewards_per_round,[str(agent) for agent in agents],path,'average_rewards', exp_factor=0.1)
-    plot_results(avg_planning_rewards_per_round,[str(agent) for agent in agents],path,'planning_rewards', exp_factor=0.1)
+    plot_results(avg_rewards_per_round,[str(agent) for agent in agents],path,'average_rewards', exp_factor=0.05)
+    plot_results(avg_planning_rewards_per_round,[str(agent) for agent in agents],path,'planning_rewards', exp_factor=0.05)
     actor_a_prob_each_round = np.transpose(np.array([agent.log for agent in agents]))
     plot_results(actor_a_prob_each_round,[str(agent) for agent in agents],path,'player_action_probabilities', ylabel = 'P(Cooperation)')
     planning_a_prob_each_round = np.array(planning_agent.get_log())
@@ -143,4 +144,4 @@ if __name__ == "__main__":
     env = Matrix_Game(fear = FEAR, greed = GREED)
     agents = create_population(env,N_PLAYERS, use_simple_agents = True)
     run_game_and_plot_results(env,agents,with_redistribution=False, max_reward_strength = 3, 
-        cost_param = 0)    
+        cost_param = 0.001)    
