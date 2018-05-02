@@ -141,6 +141,10 @@ class Matrix_Game(Environment):
     def __init__(self, fear, greed):
         self.fear = fear
         self.greed = greed
+        self.R = 3
+        self.P = 1
+        self.T = self.R+self.greed
+        self.S = self.P-self.fear
         N_ACTIONS = 2
         N_PLAYERS = 2
         N_FEATURES = 1 # just a dummy feature to avoid errors. No meaning
@@ -151,22 +155,18 @@ class Matrix_Game(Environment):
         return np.zeros(1) #dummy feature 
 
     def calculate_payoffs(self, actions):
-        R = 3
-        P = 1
-        T = R+self.greed
-        S = P-self.fear
         assert actions[0] == 1 or actions[0] == 0
         assert actions[1] == 1 or actions[1] == 0
         if actions[0] == 1: 
             if actions[1] == 0:
-                return [S,T]
+                return [self.S,self.T]
             else:
-                return [R,R]
+                return [self.R,self.R]
         else:
             if actions[1] == 0:
-                return [P,P]
+                return [self.P,self.P]
             else:
-                return [T,S]
+                return [self.T,self.S]
 
     def __str__(self):
         description = "Matrix_Game_Greed=" + str(self.greed) + "_Fear=" + str(self.fear)

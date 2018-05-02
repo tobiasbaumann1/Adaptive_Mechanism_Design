@@ -8,7 +8,7 @@ from Environments import Matrix_Game
 from Agents import Actor_Critic_Agent, Critic_Variant, Simple_Agent
 from Planning_Agent import Planning_Agent
 
-N_EPISODES = 4000
+N_EPISODES = 2000
 N_PLAYERS = 2
 N_UNITS = 10 #number of nodes in the intermediate layer of the NN
 MAX_REWARD_STRENGTH = 3
@@ -112,16 +112,16 @@ def create_population(env,n_agents, use_simple_agents = False):
 
 def run_game_and_plot_results(env,agents, 
     with_redistribution = False, max_reward_strength = None, cost_param = 0,
-    n_planning_eps = math.inf, value_function = 'exact'):
+    n_planning_eps = math.inf, value_fn_variant = 'exact'):
     planning_agent = Planning_Agent(env,agents,max_reward_strength = max_reward_strength, 
         cost_param = cost_param, with_redistribution = with_redistribution,
-        value_function = value_function)
+        value_fn_variant = value_fn_variant)
     avg_rewards_per_round,avg_planning_rewards_per_round = run_game(N_EPISODES,agents,planning_agent, 
         with_redistribution = with_redistribution, n_planning_eps = n_planning_eps)
     path = './Results/' + env.__str__() +'/with' + ('' if with_redistribution else 'out') + '_redistribution' 
     path += '/' + 'max_reward_strength_' + (str(max_reward_strength) if max_reward_strength is not None else 'inf')
     path += '/' + 'cost_parameter_' + str(cost_param)
-    path += '/' + value_function + '_value_function'
+    path += '/' + value_fn_variant + '_value_function'
     if n_planning_eps < math.inf:
         path += '/' + 'turning_off' 
 
@@ -135,9 +135,10 @@ def run_game_and_plot_results(env,agents,
     plot_results(fear_and_greed_each_round,['Fear', 'Greed'],path,'modified_fear_and_greed', ylabel = 'Fear/Greed')
 
 def calc_fear_and_greed(data, base_fear, base_greed):
-    assert(data.shape[1] == 4)
-    fear = data[:,0]-data[:,1] + base_fear
-    greed = data[:,2]-data[:,3] + base_greed
+    assert(data.shape[1] == 2)
+    assert(data.shape[2] == 2)
+    fear = data[:,0,0]-data[:,1,0] + base_fear
+    greed = data[:,0,1]-data[:,1,1] + base_greed
     return np.stack([fear,greed],axis = 1)
 
     
@@ -147,4 +148,4 @@ if __name__ == "__main__":
     env = Matrix_Game(fear = FEAR, greed = GREED)
     agents = create_population(env,N_PLAYERS, use_simple_agents = True)
     run_game_and_plot_results(env,agents,with_redistribution=False, max_reward_strength = 3, 
-        cost_param = 0.001, value_function = 'proxy', n_planning_eps = 2000)    
+        cost_param = 0.001, value_fn_variant = 'exact')    
