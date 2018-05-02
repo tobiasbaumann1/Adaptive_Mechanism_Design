@@ -11,7 +11,7 @@ tf.set_random_seed(RANDOM_SEED)
 class Planning_Agent(Agent):
     def __init__(self, env, underlying_agents, learning_rate=0.01,
         gamma = 0.95, max_reward_strength = None, cost_param = 0, with_redistribution = False, 
-        proxy_value_function = False):
+        value_function = False):
         super().__init__(env, learning_rate, gamma)     
         self.underlying_agents = underlying_agents
         self.log = []
@@ -47,9 +47,11 @@ class Planning_Agent(Agent):
                 self.vp = self.action_layer
 
         with tf.variable_scope('V_total'):
-            if proxy_value_function:
+            if value_function == 'proxy':
                 self.v = 2 * self.a_players - 1
-            else:
+            if value_function == 'exact':
+                self.v = 0
+            if value_function == 'estimated':
                 self.v = tf.reduce_sum(self.r_players) - 5.4
         with tf.variable_scope('cost_function'):
             self.g_log_pi = tf.placeholder(tf.float32, [1, n_players], "player_gradients")
@@ -58,7 +60,7 @@ class Planning_Agent(Agent):
                 # policy gradient theorem
                 idx = underlying_agent.agent_idx
                 self.g_Vp_d = self.g_log_pi[0,idx] * self.vp[0,idx]
-                self.g_V_d = self.g_log_pi[0,idx] * (self.v[0,idx] if proxy_value_function else self.v)
+                self.g_V_d = self.g_log_pi[0,idx] * (self.v[0,idx] if value_function == 'proxy' else self.v)
 
                 #cost_list.append(- underlying_agent.learning_rate * tf.tensordot(self.g_Vp_d,self.g_V_d,1))
                 cost_list.append(- underlying_agent.learning_rate * self.g_Vp_d * self.g_V_d)

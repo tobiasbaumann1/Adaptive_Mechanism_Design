@@ -112,16 +112,16 @@ def create_population(env,n_agents, use_simple_agents = False):
 
 def run_game_and_plot_results(env,agents, 
     with_redistribution = False, max_reward_strength = None, cost_param = 0,
-    n_planning_eps = math.inf, proxy_value_function = False):
+    n_planning_eps = math.inf, value_function = 'exact'):
     planning_agent = Planning_Agent(env,agents,max_reward_strength = max_reward_strength, 
         cost_param = cost_param, with_redistribution = with_redistribution,
-        proxy_value_function = proxy_value_function)
+        value_function = value_function)
     avg_rewards_per_round,avg_planning_rewards_per_round = run_game(N_EPISODES,agents,planning_agent, 
         with_redistribution = with_redistribution, n_planning_eps = n_planning_eps)
     path = './Results/' + env.__str__() +'/with' + ('' if with_redistribution else 'out') + '_redistribution' 
     path += '/' + 'max_reward_strength_' + (str(max_reward_strength) if max_reward_strength is not None else 'inf')
     path += '/' + 'cost_parameter_' + str(cost_param)
-    path += '/' + ('proxy_value_function' if proxy_value_function else 'estimated_value_function')
+    path += '/' + value_function + '_value_function'
     if n_planning_eps < math.inf:
         path += '/' + 'turning_off' 
 
@@ -147,4 +147,4 @@ if __name__ == "__main__":
     env = Matrix_Game(fear = FEAR, greed = GREED)
     agents = create_population(env,N_PLAYERS, use_simple_agents = True)
     run_game_and_plot_results(env,agents,with_redistribution=False, max_reward_strength = 3, 
-        cost_param = 0.001, proxy_value_function = False, n_planning_eps = 2000)    
+        cost_param = 0.001, value_function = 'proxy', n_planning_eps = 2000)    
