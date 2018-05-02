@@ -68,8 +68,7 @@ class Planning_Agent(Agent):
                 if value_fn_variant == 'exact':
                     self.g_p = tf.exp(-self.p_players[0,idx]) / tf.square(1+tf.exp(-self.p_players[0,idx]))
                     self.p_opp = self.p_players[0,1-idx]
-                    self.g_Vp = self.g_p * (self.p_opp * (self.a_plan[1,1] - self.a_plan[0,1])
-                     + (1-self.p_opp) * (self.a_plan[1,0] - self.a_plan[0,0]))
+                    self.g_Vp = self.g_p * tf.gradients(ys = self.vp[0,idx],xs = self.a_players)[0][0,idx]
                     self.g_V = self.g_p * (self.p_opp * (2 * env.R - env.T - env.S) 
                         + (1-self.p_opp) * (env.T + env.S - 2 * env.P))
 
