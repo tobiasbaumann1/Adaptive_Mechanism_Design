@@ -34,7 +34,7 @@ class Planning_Agent(Agent):
                 units=n_players,    # 1 output per agent
                 activation=None,
                 kernel_initializer=tf.random_normal_initializer(0, .1),  # weights
-                bias_initializer=tf.constant_initializer(0),  # biases
+                bias_initializer=tf.random_normal_initializer(0, .1),  # biases
                 name='actions_planning'
             )
 
@@ -54,7 +54,7 @@ class Planning_Agent(Agent):
             if value_fn_variant == 'proxy':
                 self.v = 2 * self.a_players - 1
             if value_fn_variant == 'estimated':
-                self.v = tf.reduce_sum(self.r_players) - 5.4
+                self.v = tf.reduce_sum(self.r_players) - 1.9
         with tf.variable_scope('cost_function'):
             if value_fn_variant == 'estimated':
                 self.g_log_pi = tf.placeholder(tf.float32, [1, n_players], "player_gradients")
@@ -66,7 +66,7 @@ class Planning_Agent(Agent):
                     self.g_Vp = self.g_log_pi[0,idx] * self.vp[0,idx]
                     self.g_V = self.g_log_pi[0,idx] * (self.v[0,idx] if value_fn_variant == 'proxy' else self.v)
                 if value_fn_variant == 'exact':
-                    self.g_p = tf.exp(-self.p_players[0,idx]) / tf.square(1+tf.exp(-self.p_players[0,idx]))
+                    self.g_p = self.p_players[0,idx] * (1-self.p_players[0,idx])
                     self.p_opp = self.p_players[0,1-idx]
                     self.g_Vp = self.g_p * tf.gradients(ys = self.vp[0,idx],xs = self.a_players)[0][0,idx]
                     self.g_V = self.g_p * (self.p_opp * (2 * env.R - env.T - env.S) 
@@ -107,7 +107,7 @@ class Planning_Agent(Agent):
                 p_players_list.append(underlying_agent.calc_action_probs(s)[0,-1])
             p_players_arr = np.reshape(np.asarray(p_players_list),[1,-1])
             feed_dict[self.p_players] = p_players_arr
-            feed_dict[self.a_plan] = self.calc_conditional_planning_actions(s,a_players)
+            feed_dict[self.a_plan] = self.calc_conditional_planning_actions(s)
         self.sess.run([self.train_op], feed_dict)
 
         action,loss,g_Vp,g_V = self.sess.run([self.action_layer,self.loss,
@@ -133,10 +133,10 @@ class Planning_Agent(Agent):
         if self.max_reward_strength is not None:
             a_plan = 2 * self.max_reward_strength * (a_plan - 0.5)
         logging.info('Planning action: ' + str(a_plan))
-        self.log.append(self.calc_conditional_planning_actions(s,a_players))
+        self.log.append(self.calc_conditional_planning_actions(s))
         return a_plan
 
-    def calc_conditional_planning_actions(self,s,a_players):
+    def calc_conditional_planning_actions(self,s):
         # Planning actions in each of the 4 cases: DD, CD, DC, CC
         a_plan_DD = self.sess.run(self.action_layer, {self.s: s, self.a_players: np.array([0,0])[np.newaxis,:]})
         a_plan_CD = self.sess.run(self.action_layer, {self.s: s, self.a_players: np.array([1,0])[np.newaxis,:]})

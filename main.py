@@ -8,12 +8,12 @@ from Environments import Matrix_Game
 from Agents import Actor_Critic_Agent, Critic_Variant, Simple_Agent
 from Planning_Agent import Planning_Agent
 
-N_EPISODES = 2000
+N_EPISODES = 4000
 N_PLAYERS = 2
 N_UNITS = 10 #number of nodes in the intermediate layer of the NN
 MAX_REWARD_STRENGTH = 3
 
-def run_game(N_EPISODES, players, planning_agent = None, with_redistribution = True, 
+def run_game(N_EPISODES, players, action_flip_prob, planning_agent = None, with_redistribution = True, 
     n_planning_eps = math.inf):
     env.reset_ep_ctr()
     avg_planning_rewards_per_round = []
@@ -34,8 +34,11 @@ def run_game(N_EPISODES, players, planning_agent = None, with_redistribution = T
             # take action and get next s and reward
             s_, rewards, done = env.step(actions)
 
+            perturbed_actions = [(1-a if np.random.binomial(1,action_flip_prob) else a) for a in actions]
+            #perturbed_actions = [0,0]
+
             if planning_agent is not None and episode < n_planning_eps:
-                planning_rs = planning_agent.choose_action(s,actions)
+                planning_rs = planning_agent.choose_action(s,perturbed_actions)
                 if with_redistribution:
                     sum_planning_r = sum(planning_rs)
                     mean_planning_r = sum_planning_r / N_PLAYERS
@@ -43,7 +46,7 @@ def run_game(N_EPISODES, players, planning_agent = None, with_redistribution = T
                 rewards = [ sum(r) for r in zip(rewards,planning_rs)]
                 cum_planning_rs = [sum(r) for r in zip(cum_planning_rs, planning_rs)]
                 # Training planning agent
-                planning_agent.learn(s,actions)
+                planning_agent.learn(s,perturbed_actions)
             logging.info('Actions:' + str(actions))
             logging.info('State after:' + str(s_))
             logging.info('Rewards: ' + str(rewards))
@@ -112,18 +115,20 @@ def create_population(env,n_agents, use_simple_agents = False):
 
 def run_game_and_plot_results(env,agents, 
     with_redistribution = False, max_reward_strength = None, cost_param = 0,
-    n_planning_eps = math.inf, value_fn_variant = 'exact'):
+    n_planning_eps = math.inf, value_fn_variant = 'exact', action_flip_prob = 0):
     planning_agent = Planning_Agent(env,agents,max_reward_strength = max_reward_strength, 
         cost_param = cost_param, with_redistribution = with_redistribution,
         value_fn_variant = value_fn_variant)
-    avg_rewards_per_round,avg_planning_rewards_per_round = run_game(N_EPISODES,agents,planning_agent, 
-        with_redistribution = with_redistribution, n_planning_eps = n_planning_eps)
+    avg_rewards_per_round,avg_planning_rewards_per_round = run_game(N_EPISODES,agents,action_flip_prob,
+        planning_agent = planning_agent, with_redistribution = with_redistribution, n_planning_eps = n_planning_eps)
     path = './Results/' + env.__str__() +'/with' + ('' if with_redistribution else 'out') + '_redistribution' 
     path += '/' + 'max_reward_strength_' + (str(max_reward_strength) if max_reward_strength is not None else 'inf')
     path += '/' + 'cost_parameter_' + str(cost_param)
     path += '/' + value_fn_variant + '_value_function'
     if n_planning_eps < math.inf:
         path += '/' + 'turning_off' 
+    if action_flip_prob > 0:
+        path += '/' + 'action_flip_prob'  + str(action_flip_prob)
 
     plot_results(avg_rewards_per_round,[str(agent) for agent in agents],path,'average_rewards', exp_factor=0.05)
     plot_results(avg_planning_rewards_per_round,[str(agent) for agent in agents],path,'planning_rewards', exp_factor=0.05)
@@ -148,4 +153,4 @@ if __name__ == "__main__":
     env = Matrix_Game(fear = FEAR, greed = GREED)
     agents = create_population(env,N_PLAYERS, use_simple_agents = True)
     run_game_and_plot_results(env,agents,with_redistribution=False, max_reward_strength = 3, 
-        cost_param = 0.001, value_fn_variant = 'estimated')    
+        action_flip_prob = 0, cost_param = 0.0002, value_fn_variant = 'exact')    
