@@ -185,7 +185,7 @@ class Simple_Agent(Agent): #plays games with 2 actions, using a single parameter
         self.td_error = tf.placeholder(tf.float32, None, "td_error")  # TD_error
 
         with tf.variable_scope('Actor'):
-            self.theta = tf.Variable(tf.random_normal([1],mean = -4, stddev=0.5)) 
+            self.theta = tf.Variable(tf.random_normal([1],mean = -2, stddev=0.5)) 
             self.actions_prob = tf.expand_dims(tf.concat([1-tf.sigmoid(self.theta),tf.sigmoid(self.theta)],0),0)
 
         with tf.variable_scope('exp_v'):
